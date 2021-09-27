@@ -28,9 +28,12 @@ Hopefully this will be fixed in the future, but it still wasn't at the time this
 
 # WUD w00t?
 
-WUD is the recursive acronym for **WiFi USB Disk**: it is an ESP32-S2 dongle with a micro sdcard slot hidden in the USB port. [wiki](https://wiki.aprbrother.com/en/wud.html).
+WUD is the recursive acronym for **WiFi USB Disk**: it is an ESP32-S2 dongle made by @AprilBrother with a Micro SDCard slot hidden in the USB port. 
 
-[![WUD Product image](https://i1.aprbrother.com/wud-1.jpg-640.jpg)](https://wiki.aprbrother.com/en/wud.html)
+See the [wiki page](https://wiki.aprbrother.com/en/wud.html) for more info.
+
+
+[![WUD Product image](https://user-images.githubusercontent.com/1893754/134933549-c7af84b7-2575-4f5b-87c0-4d1dec573ff4.png)](https://wiki.aprbrother.com/en/wud.html)
 
 
 ## Hardware/software Requirements:

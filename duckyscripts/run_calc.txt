@@ -1,0 +1,21 @@
+Rem: -------------------------------------------
+Rem: Run calculator and perform some calculation
+Rem: Tested on Windows, KDE and Gnome
+Rem: -------------------------------------------
+Rem: press HID_KEY_GUI_LEFT (left meta 'windows' key)
+Key:227
+Print:calc
+Rem: press HID_SPACE (trigger the search from windows/kde/gnome menu)
+Key:44
+Rem: press HID_KEY_ENTER / HID_KEY_RETURN ( 40 / 158 )
+Key:158
+Key:40
+CustomDelay:1000
+Rem: Hopefully the calculator is now running, set new delay between keypresses when sending a string
+KeyDelay:250
+Rem: perform some calculation (100*100)
+Print:100
+Print:*
+Print:100
+Key:158
+Key:40

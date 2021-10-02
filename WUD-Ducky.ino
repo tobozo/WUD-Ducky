@@ -51,21 +51,21 @@ const char* PASSWORD    = "12345678";
 HIDcomposite KeyboardMouse;
 SDCard2USB PenDrive;
 
+fs::FS* duckyFS = nullptr;
 
 void HIDKeySend( String str )
 {
   KeyboardMouse.sendString(str+"\n");
 }
 
-
 int keyDelay = 10; // delay (ms) between keys when sending a string
 int DelayLength = 500; // delay between commands
 int keypressdone=0;
 
-void runpayload( fs::FS &fs, const char* payload)
+void runpayload( fs::FS *fs, const char* payload)
 {
-  if( !fs.exists( payload ) ) return;
-  fs::File f = fs.open(payload, "r");
+  if( !fs->exists( payload ) ) return;
+  fs::File f = fs->open(payload, "r");
   if( !f ) return;
   // memoize settings
   int defaultdelay = DelayLength;
@@ -201,15 +201,19 @@ void setup()
   {
     if(PenDrive.begin()) {
       Serial.println("MSC lun 1 begin");
+      duckyFS = &SD;
     } else {
-      log_e("LUN 1 failed");
-      while(1) vTaskDelay(1);
+      log_e("LUN 1 failed, will use SPIFFS instead...");
+      duckyFS = &SPIFFS;
+      //while(1) vTaskDelay(1);
     }
-    vTaskDelay(10000);
   } else {
-    Serial.println("Failed to init SD");
-    while(1) vTaskDelay(1);
+    Serial.println("Failed to init SD, will use SPIFFS instead...");
+    //while(1) vTaskDelay(1);
+    duckyFS = &SPIFFS;
   }
+
+  vTaskDelay(10000);
 
   WiFi.mode(WIFI_AP);
   WiFi.softAP(SSID, PASSWORD);
@@ -222,8 +226,9 @@ void setup()
 }
 
 
-void loop() {
- server.handleClient();
- vTaskDelay(2);
+void loop()
+{
+  server.handleClient();
+  vTaskDelay(2);
 }
 

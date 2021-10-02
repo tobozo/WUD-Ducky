@@ -33,10 +33,11 @@
 
 WebServer server(80);
 fs::File fsUploadFile;
+extern fs::FS* duckyFS;
 
 
 void HIDKeySend( String str );
-void runpayload( fs::FS &fs, const char* payload);
+void runpayload( fs::FS *fs, const char* payload);
 
 
 String getContentType(String filename)
@@ -96,7 +97,7 @@ void handleFileUpload()
     }
     Serial.print("handleFileUpload Name: ");
     Serial.println(filename);
-    fsUploadFile = SD.open(filename, "w");
+    fsUploadFile = duckyFS->open(filename, "w");
     filename = String();
   } else if (upload.status == UPLOAD_FILE_WRITE) {
     if (fsUploadFile) {
@@ -121,13 +122,13 @@ bool handleFileRead(String path)
   } else {
     String contentType = getContentType(path);
     String pathWithGz = path + ".gz";
-    bool fs_exists = SD.exists(path);
-    bool gz_exists = SD.exists(pathWithGz);
-    if ( gz_exists || fs_exists ) { // is it present on the SD Card?
+    bool fs_exists = duckyFS->exists(path);
+    bool gz_exists = duckyFS->exists(pathWithGz);
+    if ( gz_exists || fs_exists ) { // is it present on the ducky filesystem ?
       if ( gz_exists ) {
         path = pathWithGz;
       }
-      fs::File file = SD.open(path, "r");
+      fs::File file = duckyFS->open(path, "r");
       if (file.isDirectory()) {
         handleIndex();
       } else {
@@ -135,17 +136,19 @@ bool handleFileRead(String path)
       }
       file.close();
       return true;
-    } else { // not on the SD Card, is it present on SPIFFS?
-      fs_exists = SPIFFS.exists(path);
-      gz_exists = SPIFFS.exists(pathWithGz);
-      if ( gz_exists || fs_exists ) {
-        if ( gz_exists ) {
-          path = pathWithGz;
+    } else { // not on the ducky filesystem
+      if( duckyFS != &SPIFFS ) { // ducky filesystem was SD, now check SPIFFS
+        fs_exists = SPIFFS.exists(path);
+        gz_exists = SPIFFS.exists(pathWithGz);
+        if ( gz_exists || fs_exists ) {
+          if ( gz_exists ) {
+            path = pathWithGz;
+          }
+          fs::File file = SPIFFS.open(path.c_str());
+          server.streamFile(file, contentType);
+          file.close();
+          return true;
         }
-        fs::File file = SPIFFS.open(path.c_str());
-        server.streamFile(file, contentType);
-        file.close();
-        return true;
       }
     }
   }
@@ -163,10 +166,10 @@ void handleFileDelete()
   if (path == "/") {
     return server.send(500, "text/plain", "BAD PATH");
   }
-  if (!SD.exists(path)) {
+  if (!duckyFS->exists(path)) {
     return server.send(404, "text/plain", "FileNotFound");
   }
-  SD.remove(path);
+  duckyFS->remove(path);
   server.sendHeader("Location", String("/"), true);
   server.send(302, "text/plain", "");
   path = String();
@@ -184,7 +187,7 @@ void handleFileList()
 
   Serial.println("handleFileList: " + path);
 
-  fs::File root = SD.open(path);
+  fs::File root = duckyFS->open(path);
   String output = "[";
 
   if (root && root.isDirectory()) {
@@ -236,14 +239,23 @@ void handleRunPayload()
   }
   path = server.arg("file");
 
-  if( !SD.exists( path ) ) {
+  if( !duckyFS->exists( path ) ) {
     return server.send(500, "text/plain", "FILE NOEXISTS");
   }
 
   server.send(200, "text/plain", path);
 
-  runpayload( SD, path.c_str() );
+  runpayload( duckyFS, path.c_str() );
 }
+
+
+/*
+void handleGetConfig()
+{
+  String os = USBHostGuessConfig();
+  server.send(200, "text/plain", os);
+}
+*/
 
 
 void startFileServer()
@@ -257,6 +269,7 @@ void startFileServer()
 
   server.on("/key", HTTP_GET, handleKeySend);
   server.on("/runpayload", HTTP_GET, handleRunPayload);
+  //server.on("/guess", HTTP_GET, handleGetConfig );
 
   server.onNotFound([]() {
     if (!handleFileRead(server.uri())) {

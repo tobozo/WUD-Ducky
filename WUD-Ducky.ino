@@ -53,6 +53,43 @@ SDCard2USB PenDrive;
 
 fs::FS* duckyFS = nullptr;
 
+void MouseDrawLine( String line )
+{
+  String strline = line;
+  int str_len = strline.length()+1;
+  char keyarray[str_len];
+  strline.toCharArray(keyarray, str_len);
+  char delimiter[] = "+";
+  char *strblock;
+  strblock = strtok(keyarray, delimiter);
+  int8_t move;
+  while(strblock != NULL) {
+    switch( strblock[0] ) {
+      case 'X': // move X axis
+        move = atoi( &strblock[1] );
+        for( int i=0; i<abs(move);i++) {
+          vTaskDelay(25);
+          KeyboardMouse.move( move>0?1:-1, 0 );
+        }
+      break;
+      case 'Y': // move Y axis
+        move = atoi( &strblock[1] );
+        for( int i=0; i<abs(move);i++) {
+          vTaskDelay(25);
+          KeyboardMouse.move( 0, move>0?1:-1 );
+        }
+      break;
+      case 'C': // click
+        vTaskDelay(15);
+        KeyboardMouse.pressLeft();
+      break;
+      default: // ignore
+      break;
+    }
+    strblock = strtok(NULL, delimiter);
+  }
+}
+
 void HIDKeySend( String str )
 {
   KeyboardMouse.sendString(str+"\n");
@@ -148,7 +185,7 @@ void runpayload( fs::FS *fs, const char* payload)
       int mousemoveamt = cmdinput.toInt();
       vTaskDelay(25);
       KeyboardMouse.move(0, 0);
-      KeyboardMouse.move(0, mousemoveamt*-1);
+      KeyboardMouse.move(0, mousemoveamt-1);
     } else if(cmd == "MouseMoveDown") { //If command equals "MouseMoveDown:X"
       int mousemoveamt = cmdinput.toInt();
       vTaskDelay(25);
@@ -176,6 +213,10 @@ void runpayload( fs::FS *fs, const char* payload)
     } else if(cmd == "MouseDoubleClickLEFT") {
       vTaskDelay(25);
       KeyboardMouse.doublePressLeft();
+    } else if(cmd == "MouseDrawLine") {
+      vTaskDelay(25);
+      MouseDrawLine( cmdinput );
+      //KeyboardMouse.doublePressLeft();
     } else {
       // wut ?
     }

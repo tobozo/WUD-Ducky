@@ -108,7 +108,7 @@ function upload() {
                     var if_payload = '';
 
                     if( (i.name).match(/quack/) ) {
-                      if_payload = ` [<a href="/runpayload?file=${i.name}">Run Payload</a>]`;
+                      if_payload = ` [<a class="payload-runner" href="/runpayload?file=${i.name}">Run Payload</a>]`;
                     }
 
                     cont.innerHTML +=

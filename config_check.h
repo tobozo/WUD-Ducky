@@ -50,7 +50,7 @@
 #if ARDUINO_USB_CDC_ON_BOOT!=0
   #warning "The menu option 'Tools / USB CDC On Boot' should be disabled for more furtivity!"
 #endif
-#if ARDUINO_USB_MSC_ON_BOOT==0
+#if ARDUINO_USB_MSC_ON_BOOT!=0
   #warning "The menu option 'Tools / USB Firmware MSC On Boot' should be disabled or the SD Card will be ignored!"
 #endif
 #if ARDUINO_USB_DFU_ON_BOOT!=0

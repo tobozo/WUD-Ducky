@@ -29,6 +29,7 @@
 #include <WiFiAP.h>
 #include <WebServer.h>
 #include <SPIFFS.h>
+#include "index.h" // more
 
 
 WebServer server(80);
@@ -38,7 +39,14 @@ extern fs::FS* duckyFS;
 
 void HIDKeySend( String str );
 void runpayload( fs::FS *fs, const char* payload);
+void (*WebServerLogsPrinter)( void(*)( String) );
+void (*WebServerLogger)( String err );
 
+static String logoutput;
+void logprinter(String msg)
+{
+  logoutput += msg + "\n";
+}
 
 String getContentType(String filename)
 {
@@ -75,11 +83,18 @@ String getContentType(String filename)
 
 void handleIndex()
 {
-  String path = "/index.htm";
+  String path = "/index.html";
   String contentType = "text/html";
-  fs::File file = SPIFFS.open(path.c_str());
-  server.streamFile(file, contentType);
-  file.close();
+  if( SPIFFS.exists( path ) ) {
+    fs::File file = SPIFFS.open(path.c_str());
+    if( file ) {
+      server.streamFile(file, contentType);
+      file.close();
+      return;
+    }
+  }
+  if( WebServerLogger ) WebServerLogger("Using built-in index, upload 'index.html' to override.");
+  server.send(200, contentType, index_html );
 }
 
 
@@ -109,6 +124,8 @@ void handleFileUpload()
     }
     Serial.print("handleFileUpload Size: ");
     Serial.println(upload.totalSize);
+
+    if( WebServerLogger ) WebServerLogger("File uploaded successfully");
   }
 }
 
@@ -170,6 +187,7 @@ void handleFileDelete()
     return server.send(404, "text/plain", "FileNotFound");
   }
   duckyFS->remove(path);
+  if( WebServerLogger ) WebServerLogger("File deleted successfully");
   server.sendHeader("Location", String("/"), true);
   server.send(302, "text/plain", "");
   path = String();
@@ -188,12 +206,15 @@ void handleFileList()
   Serial.println("handleFileList: " + path);
 
   fs::File root = duckyFS->open(path);
-  String output = "[";
+
+  String fsname = duckyFS==&SPIFFS ? "spiffs" : "sd";
+
+  String output = "{\"filesystem\":\""+fsname+"\", \"files\":[";
 
   if (root && root.isDirectory()) {
     fs::File file = root.openNextFile();
     while (file) {
-      if (output != "[") {
+      if (output[output.length()-1] == '}') {
         output += ',';
       }
 
@@ -207,8 +228,11 @@ void handleFileList()
       file = root.openNextFile();
     }
   }
-  output += "]";
+  output += "]}";
   server.send(200, "text/json", output);
+
+  Serial.printf("SENT JSON: %s\n", output.c_str() );
+
 }
 
 
@@ -220,7 +244,7 @@ void handleKeySend()
   }
   String path = server.arg(0);
   Serial.println("handleKeySend: " + path);
-  HIDKeySend(path+"\n");
+  HIDKeySend( path+"\n");
   server.send(200, "text/plain", path);
   path = String();
 }
@@ -242,11 +266,46 @@ void handleRunPayload()
   if( !duckyFS->exists( path ) ) {
     return server.send(500, "text/plain", "FILE NOEXISTS");
   }
-
   server.send(200, "text/plain", path);
-
   runpayload( duckyFS, path.c_str() );
+  //if( WebServerLogger ) WebServerLogger(response);
 }
+
+
+
+
+void handleGetLogs()
+{
+  if(WebServerLogsPrinter) {
+    logoutput = "";
+    WebServerLogsPrinter( logprinter );
+    server.send(200, "text/plain", logoutput);
+  }
+}
+
+
+
+void handleChangeFS()
+{
+  if (server.args() == 0) {
+    return server.send(500, "text/plain", "MISSING ARGS");
+  }
+  String fsname = server.arg(0);
+  String response = "Filesystem changed to " + fsname + " successfully";
+  if( fsname == "spiffs" ) {
+    duckyFS = &SPIFFS;
+  } else  if( fsname == "sd" ) {
+    duckyFS = &SD;
+  } else {
+    response = "Unknown filesystem";
+  }
+  if( WebServerLogger ) WebServerLogger(response);
+  server.sendHeader("Location", String("/"), true);
+  server.send(302, "text/plain", "");
+  //server.send(rescode, "text/plain", response);
+}
+
+
 
 
 /*
@@ -261,6 +320,8 @@ void handleGetConfig()
 void startFileServer()
 {
   server.on("/list", HTTP_GET, handleFileList);
+  server.on("/logs", HTTP_GET, handleGetLogs);
+  server.on("/changefs", HTTP_GET, handleChangeFS );
   server.on("/delete", HTTP_POST, handleFileDelete);
   server.on("/upload", HTTP_POST, []() {
     server.sendHeader("Location", String("/"), true);
@@ -276,6 +337,7 @@ void startFileServer()
       server.send(404, "text/plain", "FileNotFound");
     }
   });
+  if( WebServerLogger ) WebServerLogger("WebServer started");
   server.begin();
 }
 

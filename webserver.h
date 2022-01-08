@@ -29,24 +29,288 @@
 #include <WiFiAP.h>
 #include <WebServer.h>
 #include <SPIFFS.h>
-#include "index.h" // more
-
+#include "index.h" // can be edited in place, or overriden with "index.html" file on SPIFFS
 
 WebServer server(80);
 fs::File fsUploadFile;
 extern fs::FS* duckyFS;
-
-
-void HIDKeySend( String str );
-void runpayload( fs::FS *fs, const char* payload);
-void (*WebServerLogsPrinter)( void(*)( String) );
-void (*WebServerLogger)( String err );
-
+bool webserver_begun = false;
 static String logoutput;
+
+typedef void(*wslogprintercb)( String msg );
+void (*WebServerLogsPrinter)( wslogprintercb cb, bool clear_after );
+wslogprintercb WebServerLogger;
+void (*HIDKeySender)( String str );
+void runpayload( fs::FS *fs, const char* payload);
+
+void startWebServer();
+void handleIndex();
+void handleFileUpload();
+bool handleFileRead(String path);
+void handleFileDelete();
+void handleFileList();
+void handleKeySend();
+void handleRunPayload();
+void handleGetLogs();
+void handleChangeFS();
+
+void WebServerLogMsg( String msg );
+void logprinter(String msg);
+String getContentType(String filename);
+
+
+void startWebServer()
+{
+  if( webserver_begun ) {
+    WebServerLogMsg("WebServer is already started");
+    return;
+  }
+  server.on("/list", HTTP_GET, handleFileList);
+  server.on("/logs", HTTP_GET, handleGetLogs);
+  server.on("/changefs", HTTP_GET, handleChangeFS );
+  server.on("/delete", HTTP_POST, handleFileDelete);
+  server.on("/key", HTTP_GET, handleKeySend);
+  server.on("/runpayload", HTTP_GET, handleRunPayload);
+  server.on("/upload", HTTP_POST, []() {
+    server.sendHeader("Location", String("/"), true);
+    server.send(302, "text/plain", "");
+  }, handleFileUpload);
+  server.onNotFound([]() {
+    if (!handleFileRead(server.uri())) {
+      server.send(404, "text/plain", "FileNotFound");
+    }
+  });
+  server.begin();
+  WebServerLogMsg("WebServer started");
+  webserver_begun = true;
+}
+
+
+void handleIndex()
+{
+  String path = "/index.html";
+  String contentType = "text/html";
+  if( SPIFFS.exists( path ) ) {
+    fs::File file = SPIFFS.open(path.c_str());
+    if( file ) {
+      server.streamFile(file, contentType);
+      file.close();
+      return;
+    }
+  }
+  WebServerLogMsg("Using built-in index, upload 'index.html' to override.");
+  server.send(200, contentType, index_html );
+}
+
+
+void handleFileUpload()
+{
+  if (server.uri() != "/upload") {
+    return;
+  }
+
+  HTTPUpload& upload = server.upload();
+  if (upload.status == UPLOAD_FILE_START) {
+    String filename = upload.filename;
+    if (!filename.startsWith("/")) {
+      filename = "/" + filename;
+    }
+    log_d("Receiving file: %s", filename.c_str() );
+    fsUploadFile = duckyFS->open(filename, "w");
+    filename = String();
+  } else if (upload.status == UPLOAD_FILE_WRITE) {
+    if (fsUploadFile) {
+      fsUploadFile.write(upload.buf, upload.currentSize);
+    }
+  } else if (upload.status == UPLOAD_FILE_END) {
+    if (fsUploadFile) {
+      fsUploadFile.close();
+    }
+    log_d("File Size: %d", upload.totalSize);
+    WebServerLogMsg("File uploaded successfully");
+  }
+}
+
+
+bool handleFileRead(String path)
+{
+  if (path.endsWith("/")) {
+    handleIndex();
+    log_d("Serving file: %s", path.c_str() );
+    return true;
+  } else {
+    String contentType = getContentType(path);
+    String pathWithGz = path + ".gz";
+    bool fs_exists = duckyFS->exists(path);
+    bool gz_exists = duckyFS->exists(pathWithGz);
+    if ( gz_exists || fs_exists ) { // is it present on the ducky filesystem ?
+      if ( gz_exists ) {
+        path = pathWithGz;
+      }
+      fs::File file = duckyFS->open(path, "r");
+      if (file.isDirectory()) {
+        handleIndex();
+      } else {
+        server.streamFile(file, contentType);
+      }
+      file.close();
+      log_d("Served path from %s: %s", duckyFS != &SPIFFS ? "SD":"SPIFFS", path.c_str() );
+      return true;
+    } else { // not on the ducky filesystem
+      if( duckyFS != &SPIFFS ) { // ducky filesystem was SD, now check SPIFFS
+        fs_exists = SPIFFS.exists(path);
+        gz_exists = SPIFFS.exists(pathWithGz);
+        if ( gz_exists || fs_exists ) {
+          if ( gz_exists ) {
+            path = pathWithGz;
+          }
+          fs::File file = SPIFFS.open(path.c_str());
+          server.streamFile(file, contentType);
+          file.close();
+          log_d("Served path from SPIFFS: %s", path.c_str() );
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+
+void handleFileDelete()
+{
+  if (server.args() == 0) {
+    return server.send(500, "text/plain", "BAD ARGS");
+  }
+  String path = server.arg(0);
+  log_d("Deleting file: %s", path.c_str() );
+  if (path == "/") {
+    return server.send(500, "text/plain", "BAD PATH");
+  }
+  if (!duckyFS->exists(path)) {
+    return server.send(404, "text/plain", "FileNotFound");
+  }
+  duckyFS->remove(path);
+  WebServerLogMsg("File deleted successfully");
+  server.sendHeader("Location", String("/"), true);
+  server.send(302, "text/plain", "");
+  path = String();
+}
+
+
+void handleFileList()
+{
+  String path;
+  if (!server.hasArg("dir")) {
+    path = "/";
+  } else {
+    path = server.arg("dir");
+  }
+
+  log_d("Listing files from: %s", path);
+
+  fs::File root = duckyFS->open(path);
+
+  String fsname = duckyFS==&SPIFFS ? "spiffs" : "sd";
+
+  String output = "{\"filesystem\":\""+fsname+"\", \"files\":[";
+
+  if (root && root.isDirectory()) {
+    fs::File file = root.openNextFile();
+    while (file) {
+      char lastchar = output[output.length()-1];
+      if (lastchar == '}' || lastchar == ']' ) {
+        // last char was a closing bracket, insert comma
+        output += ',';
+      }
+      output += "{\"type\":\"";
+      output += (file.isDirectory()) ? "dir" : "file";
+      output += "\",\"name\":\"";
+      output += String(file.path());
+      output += "\",\"size\":";
+      output += String(file.size());
+      output += "}";
+      file = root.openNextFile();
+    }
+  }
+  output += "]}";
+  server.send(200, "text/json", output);
+  log_d("SENT JSON: %s\n", output.c_str() );
+}
+
+
+void handleKeySend()
+{
+  if (server.args() == 0) {
+    return server.send(500, "text/plain", "MISSING ARGS");
+  }
+  String path = server.arg(0);
+  log_d("Sending Keys: %s\\n", path.c_str() );
+  if( HIDKeySender) HIDKeySender( path+"\n");
+  server.send(200, "text/plain", path);
+  path = String();
+}
+
+
+void handleRunPayload()
+{
+  if (server.args() == 0) {
+    return server.send(500, "text/plain", "MISSING ARGS");
+  }
+  if (!server.hasArg("file")) {
+    return server.send(500, "text/plain", "BAD ARGS");
+  }
+  String path = server.arg("file");
+  if( !duckyFS->exists( path ) ) {
+    return server.send(500, "text/plain", "FILE NOEXISTS");
+  }
+  server.send(200, "text/plain", path);
+  runpayload( duckyFS, path.c_str() );
+}
+
+
+void handleGetLogs()
+{
+  if(WebServerLogsPrinter) {
+    logoutput = "";
+    WebServerLogsPrinter( logprinter, false );
+    server.send(200, "text/plain", logoutput);
+  }
+}
+
+
+void handleChangeFS()
+{
+  if (server.args() == 0) {
+    return server.send(500, "text/plain", "MISSING ARGS");
+  }
+  String fsname = server.arg(0);
+  String response = "Filesystem changed to " + fsname + " successfully";
+  if( fsname == "spiffs" ) {
+    duckyFS = &SPIFFS;
+  } else  if( fsname == "sd" ) {
+    duckyFS = &SD;
+  } else {
+    response = "Unknown filesystem";
+  }
+  WebServerLogMsg(response);
+  server.sendHeader("Location", String("/"), true);
+  server.send(302, "text/plain", "");
+}
+
+
+void WebServerLogMsg( String msg )
+{
+  if( WebServerLogger ) WebServerLogger(msg);
+  else Serial.println( msg );
+}
+
+
 void logprinter(String msg)
 {
   logoutput += msg + "\n";
 }
+
 
 String getContentType(String filename)
 {
@@ -79,265 +343,3 @@ String getContentType(String filename)
   }
   return "text/plain";
 }
-
-
-void handleIndex()
-{
-  String path = "/index.html";
-  String contentType = "text/html";
-  if( SPIFFS.exists( path ) ) {
-    fs::File file = SPIFFS.open(path.c_str());
-    if( file ) {
-      server.streamFile(file, contentType);
-      file.close();
-      return;
-    }
-  }
-  if( WebServerLogger ) WebServerLogger("Using built-in index, upload 'index.html' to override.");
-  server.send(200, contentType, index_html );
-}
-
-
-void handleFileUpload()
-{
-  if (server.uri() != "/upload") {
-    return;
-  }
-
-  HTTPUpload& upload = server.upload();
-  if (upload.status == UPLOAD_FILE_START) {
-    String filename = upload.filename;
-    if (!filename.startsWith("/")) {
-      filename = "/" + filename;
-    }
-    Serial.print("handleFileUpload Name: ");
-    Serial.println(filename);
-    fsUploadFile = duckyFS->open(filename, "w");
-    filename = String();
-  } else if (upload.status == UPLOAD_FILE_WRITE) {
-    if (fsUploadFile) {
-      fsUploadFile.write(upload.buf, upload.currentSize);
-    }
-  } else if (upload.status == UPLOAD_FILE_END) {
-    if (fsUploadFile) {
-      fsUploadFile.close();
-    }
-    Serial.print("handleFileUpload Size: ");
-    Serial.println(upload.totalSize);
-
-    if( WebServerLogger ) WebServerLogger("File uploaded successfully");
-  }
-}
-
-
-bool handleFileRead(String path)
-{
-  Serial.println("handleFileRead: " + path);
-  if (path.endsWith("/")) {
-    handleIndex();
-    return true;
-  } else {
-    String contentType = getContentType(path);
-    String pathWithGz = path + ".gz";
-    bool fs_exists = duckyFS->exists(path);
-    bool gz_exists = duckyFS->exists(pathWithGz);
-    if ( gz_exists || fs_exists ) { // is it present on the ducky filesystem ?
-      if ( gz_exists ) {
-        path = pathWithGz;
-      }
-      fs::File file = duckyFS->open(path, "r");
-      if (file.isDirectory()) {
-        handleIndex();
-      } else {
-        server.streamFile(file, contentType);
-      }
-      file.close();
-      return true;
-    } else { // not on the ducky filesystem
-      if( duckyFS != &SPIFFS ) { // ducky filesystem was SD, now check SPIFFS
-        fs_exists = SPIFFS.exists(path);
-        gz_exists = SPIFFS.exists(pathWithGz);
-        if ( gz_exists || fs_exists ) {
-          if ( gz_exists ) {
-            path = pathWithGz;
-          }
-          fs::File file = SPIFFS.open(path.c_str());
-          server.streamFile(file, contentType);
-          file.close();
-          return true;
-        }
-      }
-    }
-  }
-  return false;
-}
-
-
-void handleFileDelete()
-{
-  if (server.args() == 0) {
-    return server.send(500, "text/plain", "BAD ARGS");
-  }
-  String path = server.arg(0);
-  Serial.println("handleFileDelete: " + path);
-  if (path == "/") {
-    return server.send(500, "text/plain", "BAD PATH");
-  }
-  if (!duckyFS->exists(path)) {
-    return server.send(404, "text/plain", "FileNotFound");
-  }
-  duckyFS->remove(path);
-  if( WebServerLogger ) WebServerLogger("File deleted successfully");
-  server.sendHeader("Location", String("/"), true);
-  server.send(302, "text/plain", "");
-  path = String();
-}
-
-
-void handleFileList()
-{
-  String path;
-  if (!server.hasArg("dir")) {
-    path = "/";
-  } else {
-    path = server.arg("dir");
-  }
-
-  Serial.println("handleFileList: " + path);
-
-  fs::File root = duckyFS->open(path);
-
-  String fsname = duckyFS==&SPIFFS ? "spiffs" : "sd";
-
-  String output = "{\"filesystem\":\""+fsname+"\", \"files\":[";
-
-  if (root && root.isDirectory()) {
-    fs::File file = root.openNextFile();
-    while (file) {
-      if (output[output.length()-1] == '}') {
-        output += ',';
-      }
-
-      output += "{\"type\":\"";
-      output += (file.isDirectory()) ? "dir" : "file";
-      output += "\",\"name\":\"";
-      output += String(file.path());
-      output += "\",\"size\":";
-      output += String(file.size());
-      output += "}";
-      file = root.openNextFile();
-    }
-  }
-  output += "]}";
-  server.send(200, "text/json", output);
-
-  Serial.printf("SENT JSON: %s\n", output.c_str() );
-
-}
-
-
-
-void handleKeySend()
-{
-  if (server.args() == 0) {
-    return server.send(500, "text/plain", "MISSING ARGS");
-  }
-  String path = server.arg(0);
-  Serial.println("handleKeySend: " + path);
-  HIDKeySend( path+"\n");
-  server.send(200, "text/plain", path);
-  path = String();
-}
-
-
-void handleRunPayload()
-{
-  if (server.args() == 0) {
-    return server.send(500, "text/plain", "MISSING ARGS");
-  }
-
-  String path;
-
-  if (!server.hasArg("file")) {
-    return server.send(500, "text/plain", "BAD ARGS");
-  }
-  path = server.arg("file");
-
-  if( !duckyFS->exists( path ) ) {
-    return server.send(500, "text/plain", "FILE NOEXISTS");
-  }
-  server.send(200, "text/plain", path);
-  runpayload( duckyFS, path.c_str() );
-  //if( WebServerLogger ) WebServerLogger(response);
-}
-
-
-
-
-void handleGetLogs()
-{
-  if(WebServerLogsPrinter) {
-    logoutput = "";
-    WebServerLogsPrinter( logprinter );
-    server.send(200, "text/plain", logoutput);
-  }
-}
-
-
-
-void handleChangeFS()
-{
-  if (server.args() == 0) {
-    return server.send(500, "text/plain", "MISSING ARGS");
-  }
-  String fsname = server.arg(0);
-  String response = "Filesystem changed to " + fsname + " successfully";
-  if( fsname == "spiffs" ) {
-    duckyFS = &SPIFFS;
-  } else  if( fsname == "sd" ) {
-    duckyFS = &SD;
-  } else {
-    response = "Unknown filesystem";
-  }
-  if( WebServerLogger ) WebServerLogger(response);
-  server.sendHeader("Location", String("/"), true);
-  server.send(302, "text/plain", "");
-  //server.send(rescode, "text/plain", response);
-}
-
-
-
-
-/*
-void handleGetConfig()
-{
-  String os = USBHostGuessConfig();
-  server.send(200, "text/plain", os);
-}
-*/
-
-
-void startFileServer()
-{
-  server.on("/list", HTTP_GET, handleFileList);
-  server.on("/logs", HTTP_GET, handleGetLogs);
-  server.on("/changefs", HTTP_GET, handleChangeFS );
-  server.on("/delete", HTTP_POST, handleFileDelete);
-  server.on("/upload", HTTP_POST, []() {
-    server.sendHeader("Location", String("/"), true);
-    server.send(302, "text/plain", "");
-  }, handleFileUpload);
-
-  server.on("/key", HTTP_GET, handleKeySend);
-  server.on("/runpayload", HTTP_GET, handleRunPayload);
-  //server.on("/guess", HTTP_GET, handleGetConfig );
-
-  server.onNotFound([]() {
-    if (!handleFileRead(server.uri())) {
-      server.send(404, "text/plain", "FileNotFound");
-    }
-  });
-  if( WebServerLogger ) WebServerLogger("WebServer started");
-  server.begin();
-}
-

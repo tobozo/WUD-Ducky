@@ -1,3 +1,29 @@
+/*\
+ *
+ * ESP32-S2 WUD-Ducky
+ *
+ * Copyright (c) 2021 tobozo
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ *
+\*/
+
 #pragma once
 
 #define MOUSE_LEFT_BTN    0x01
@@ -9,10 +35,14 @@
 
 #include "USB.h"
 #include "USBHID.h"
+
+
+// some easter egg to test the mouse in absolute positioning mode
+
 #include "../xbm/alien.xbm.h"
 
-
-typedef struct {
+typedef struct
+{
   uint32_t width;
   uint32_t height;
   uint32_t len;
@@ -33,6 +63,8 @@ xbmImage_t Alien_128x64 =
 void (*MouseLogger)( String err );
 
 
+static uint8_t _report_id = 0x05;
+
 // we use a custom HID report descriptor with absolute mouse positioning
 static const uint8_t report_descriptor[] PROGMEM = {
   0x05, 0x01,           // USAGE_PAGE (Generic Desktop)
@@ -40,7 +72,7 @@ static const uint8_t report_descriptor[] PROGMEM = {
   0xa1, 0x01,           // COLLECTION (Application)
   0x09, 0x01,           //   USAGE (Pointer)
   0xA1, 0x00,           //   COLLECTION (Physical)
-  0x85, 0x01,           //     REPORT_ID (1)
+  0x85, _report_id,     //     REPORT_ID (1)
   0x05, 0x09,           //     USAGE_PAGE (Button)
   0x19, 0x01,           //     USAGE_MINIMUM (1)
   0x29, 0x03,           //     USAGE_MAXIMUM (3)
@@ -72,6 +104,8 @@ typedef struct TU_ATTR_PACKED
 } abs_mouse_report_t;
 
 
+bool absmouse_begun = false;
+
 class HIDAbsMouse: public USBHIDDevice
 {
 
@@ -89,7 +123,9 @@ public:
 
   void begin(void)
   {
+    if( absmouse_begun ) return;
     HID->begin();
+    absmouse_begun = true;
   }
 
   uint16_t _onGetDescriptor(uint8_t* buffer)
@@ -100,7 +136,14 @@ public:
 
   bool send(abs_mouse_report_t * value)
   {
-    return HID->SendReport( 1, value, sizeof(abs_mouse_report_t) );
+    while(!HID->ready() ) vTaskDelay(1);
+    return HID->SendReport( _report_id, value, sizeof(abs_mouse_report_t) );
+  }
+
+  void end()
+  {
+    HID->end();
+    absmouse_begun = false;
   }
 
 private:
@@ -108,7 +151,7 @@ private:
 
 };
 
-
+// GFX class to draw with the mouse
 
 class GfxMouse
 {
@@ -121,22 +164,20 @@ public:
     setDisplay( w, h );
   };
 
-  bool button_pushed = false;
-
   int32_t screen_width;
   int32_t screen_height;
   uint32_t delayafter = 20; // ms wait after each report
 
+  // the display width/height is used to translate absolute coordinates to values understood by the mouse driver (0-32767)
   void setDisplay( uint32_t w, uint32_t h )
   {
     screen_width = w;
     screen_height = h;
     if( MouseLogger ) MouseLogger( String( "Mouse moves will translate to ["+String(w)+"*"+String(h)+"]" ) );
-    setRealCoords( screen_width/2, screen_height/2 );
-    MouseReport.buttons = 0;
-    AbsMouse->send(&MouseReport);
+    sendReport( screen_width/2, screen_height/2, 0 );
   }
 
+  // where x and y are absolute coordinates (in pixels) on the display
   void setRealCoords( int32_t x, int32_t y )
   {
     // constrain coords to screen width/height
@@ -152,51 +193,103 @@ public:
     MouseReport.y = py;
   }
 
-  void moveX( int x )
+  void sendDoubleClick( uint8_t buttons_mask, uint32_t pushed, uint32_t released )
   {
-    moveRelative( x, 0, button_pushed );
+    sendButtons( buttons_mask );
+    delay( pushed );
+    sendButtons( 0 );
+    delay( released );
+    sendButtons( buttons_mask );
+    delay( pushed );
+    sendButtons( 0 );
+    delay( released );
   }
 
-  void moveY( int y )
+  // relative move on the X axis
+  void moveXrel( int8_t x )
   {
-    moveRelative( 0, y, button_pushed );
+    sendReport( _lastx+x, _lasty, _lastbtnmask );
   }
 
-  void moveRelative( int x, int y, int button )
+  // relative move on the Y axis
+  void moveYrel( int8_t y )
   {
-    bool is_pushed = isPushed( button );
-    setRealCoords( _lastx+x, _lasty+y );
-    if( is_pushed ) AbsMouse->send(&MouseReport);
-    vTaskDelay(delayafter);
+    sendReport( _lastx, _lasty+y, _lastbtnmask );
   }
 
-  void moveTo( int x, int y, int button )
+  // absolute move on the X axis
+  void moveXabs( int32_t x )
   {
-    bool is_pushed = isPushed( button );
-    setRealCoords( x, y );
-    if( is_pushed ) AbsMouse->send(&MouseReport);
-    vTaskDelay(delayafter);
+    sendReport( x, _lasty, _lastbtnmask );
   }
 
-  bool isPushed( int button )
+  // absolute move on the Y axis
+  void moveYabs( int32_t y )
   {
-    bool is_pushed = (button>0);
-    if( button_pushed != is_pushed ) {
-      MouseReport.buttons = is_pushed ? MOUSE_LEFT_BTN : 0;
-      AbsMouse->send(&MouseReport);
-      button_pushed = is_pushed;
-      //Serial.printf("New left button state: %s\n", is_pushed ? "pushed":"released");
-      vTaskDelay(delayafter);
-    }
-    return is_pushed;
+    sendReport( _lastx, y, _lastbtnmask );
   }
+
+  // relative move on the X+Y axis with button state
+  void moveXYrel( int8_t x, int8_t y, uint8_t buttons_mask )
+  {
+    sendReport( _lastx+x, _lasty+y, buttons_mask );
+  }
+
+  // relative move on the X+Y axis with button state
+  void moveXYabs( int32_t x, int32_t y, uint8_t buttons_mask )
+  {
+    sendReport( x, y, buttons_mask );
+  }
+
+  // absolute move on the X+Y axis with button state
+  /*
+  void moveTo( int x, int y, uint8_t buttons_mask )
+  {
+    sendReport( x, y, buttons_mask );
+  }*/
 
   abs_mouse_report_t *getMouseReport()
   {
     return &MouseReport;
   }
 
-  void drawLine(int x0, int y0, int x1, int y1, int button)
+  // change buttons state without sending report
+  void setButtons( uint8_t buttons_mask )
+  {
+    MouseReport.buttons = buttons_mask;
+    _lastbtnmask = buttons_mask;
+  }
+
+  uint8_t getButtons()
+  {
+    return _lastbtnmask;
+  }
+
+  void sendButtons( uint8_t buttons_mask )
+  {
+    setButtons( buttons_mask );
+    sendReport();
+  }
+
+  void sendReport( int x, int y, uint8_t buttons_mask )
+  {
+    setButtons( buttons_mask );
+    setRealCoords( x, y );
+    sendReport();
+    if( _lastbtnmask != buttons_mask ) {
+      _lastbtnmask = buttons_mask;
+      vTaskDelay(delayafter);
+    }
+  }
+
+  void sendReport()
+  {
+    if( absmouse_begun ) AbsMouse->send(&MouseReport);
+  }
+
+
+
+  void drawLine(int x0, int y0, int x1, int y1, uint8_t buttons_mask )
   {
     bool steep = false;
     if (std::abs(x0-x1)<std::abs(y0-y1)) {
@@ -209,7 +302,8 @@ public:
       std::swap(y0, y1);
     }
 
-    MouseReport.buttons = MOUSE_LEFT_BTN;
+    sendReport( x0, y0, 0 );
+    setButtons( buttons_mask );
 
     int dx = x1-x0;
     int dy = y1-y0;
@@ -218,15 +312,9 @@ public:
     int y = y0;
     for (int x=x0; x<=x1; x++) {
       if (steep) {
-        setRealCoords( y, x );
-        isPushed( button );
-        AbsMouse->send(&MouseReport);
-        vTaskDelay(delayafter);
+        sendReport( y, x, buttons_mask );
       } else {
-        setRealCoords( x, y );
-        isPushed( button );
-        AbsMouse->send(&MouseReport);
-        vTaskDelay(delayafter);
+        sendReport( x, y, buttons_mask );
       }
       error += derror;
       if (error>.5) {
@@ -234,14 +322,12 @@ public:
         error -= 1.;
       }
     }
-
-    MouseReport.buttons = 0;
+    sendReport( _lastx, _lasty, 0 );
   }
 
   void drawXbm( xbmImage_t* xbmImage, int32_t startx, int32_t starty )
   {
-    setRealCoords( startx, starty );
-    MouseReport.buttons = 0;
+    sendReport( startx, starty, 0 );
     for( int i=0; i<xbmImage->len; i++ ) {
       uint8_t block = xbmImage->bytes[i];
       int32_t x = (i%xbmImage->rowlen)*8;
@@ -251,22 +337,11 @@ public:
           x = 0;
           y++;
         }
-
-        bool is_pushed = (block & (1<<a));
-        if( button_pushed != is_pushed ) {
-          MouseReport.buttons = is_pushed ? MOUSE_LEFT_BTN : 0;
-          AbsMouse->send(&MouseReport);
-          button_pushed = is_pushed;
-          vTaskDelay(25);
-        }
-        setRealCoords( startx+x+a, starty+y );
-        if( is_pushed ) {
-          AbsMouse->send(&MouseReport);
-          vTaskDelay(10);
-        }
+        sendReport( startx+x+a, starty+y, (block & (1<<a)) ? MOUSE_LEFT_BTN : 0 );
       }
-      vTaskDelay(1);
+      delay(delayafter);
     }
+    sendReport( _lastx, _lasty, 0 );
   }
 
   //   void drawCircle(int x, int y, int radius ) { }
@@ -280,6 +355,7 @@ private:
   abs_mouse_report_t MouseReport;
   int32_t _lastx;
   int32_t _lasty;
+  uint8_t _lastbtnmask;
 
 };
 

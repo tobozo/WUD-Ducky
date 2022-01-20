@@ -41,61 +41,188 @@ const char* index_html = R"indexHTML(
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="manifest" href="/site.webmanifest">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta charset="utf-8">
   <style>
 
     #fs-name::before { display:inline-block;content:"Filesystem:"; }
-    #fs-name button { color: red; }
+    #fs-name button { color: #ff6a3d; }
     #fs-name button::before { display:inline-block;content:"Switch to:"; }
     #fs-name button.enabled::before { display:inline-block;content:"Using:"; }
-    #fs-name button.enabled { color: green; pointer-events:none; border-color: transparent; background: transparent; }
+    #fs-name button.enabled { color: #f4db7d; pointer-events:none; border-color: #f4db7d; background: #585858; }
     #logs::before { display:block;content:"System Logs:"; }
 
     .nodelete .delete-tab, .nodelete #uploader-tab { display:none; }
 
-  </style>
+  @media (max-width: 1080px) {
+    body{
+       width: 100%;
+      }
+    input[type="file"]{
+       background-color: #394f8a;
+       color: #ffffff;
+       width: 85%;
+      }
+
+    #fs-name button{
+       border-bottom: #f4db7d;
+       width: 120px;
+       height: 30px;
+      }
+
+    button{
+      background-color: #394f8a;
+      color: #ff6a3d;
+      width:80px;
+      height:30px;
+    }
+
+    #logs{
+      background:#0f213b;
+      -moz-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+      -webkit-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+      box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+      height: 480px;
+      width: 400px;
+      overflow-y: scroll;
+      text-align: left;
+    }
+
+    .payload-runner .payload-viewer .delete-tab{
+      width: 60%;
+    }
+
+    .fixed{
+      margin: 0 auto;
+      border-collapse: collapse;
+     }
+  }
+
+    *{
+     background-color: #1a2238;
+     border-radius: 7px 10px 7px 10px;
+     -webkit-border-radius: 7px 10px 7px 10px;
+     -moz-border-radius: 7px 10px 7px 10px;
+     -webkit-font-smoothing: antialiased;
+     -moz-osx-font-smoothing: grayscale;
+     border-color: #394f8a;
+     color: #ff6a3d;
+    }
+
+    #fs-name button{
+     border-bottom: #f4db7d;
+     width: 120px;
+     height: 30px;
+    }
+
+     input{
+     background-color: #394f8a;
+     color: #ffffff;
+     width: 22%;
+    }
+
+    button{
+     background-color: #394f8a;
+     color: #ff6a3d;
+     width:100px;
+     height:30px;
+    }
+
+    #reload{
+     background-color: #394f8a;
+     color: #ff6a3d;
+     width:100px;
+     height:30px;
+    }
+
+    h2{
+     font-family: courier, courier-new, serif;
+     -moz-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+     -webkit-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+     box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+     color: #ffffff;
+     font-size: 35px;
+     text-transform: uppercase;
+     background-color:#424242;
+     border-bottom: 3px solid #ff6a3d;
+     text-align: center;
+    }
+
+    label{
+     color: #ffffff;
+     text-align: right;
+    }
+
+    td{
+     text-align: center;
+    }
+
+    #logs{
+     background:#0f213b;
+     -moz-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+     -webkit-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+     box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+     text-align: left;
+     height: 480px;
+     overflow-y: scroll;
+    }
+
+    #filesystemlogs{
+     background: #394f8a;
+     margin: 0 auto;
+     border-collapse: collapse;
+    }
+
+    .fixed{
+      margin: 0 auto;
+      border-collapse: collapse;
+    }
+
+</style>
 </head>
 <body>
 <div class="main">
   <table width="100%" class="fixed" border="0">
-  <tr><td>
-    <h2>WUD Ducky Payload Runner</h2>
-  </td><td id="uploader-tab">
-    <table border="0">
-      <tr>
-        <td>
-          <label for="newfile">Upload a file</label>
-        </td>
-        <td>
-          <input id="filepath" type="hidden">
-          <input id="newfile" type="file" onchange="setpath()" style="width:100%;">
-        </td>
-      </tr>
-      <tr>
-        <td></td>
-        <td>
-          <button id="upload" type="button" onclick="upload()">Upload</button>
-        </td>
-      </tr>
-    </table>
-  </td></tr>
+  <tr>
+  <td>
+  <h2>WUD Ducky Payload Runner</h2>
+  </td>
+  <td id="uploader-tab">
+  <table border="0">
+  <tr>
+  </tr>
+  <tr>
+  </tr>
   </table>
-  <table width="100%" class="fixed" border="1">
-    <thead>
-      <tr><th>Name</th><th>Type</th><th>Size (Bytes)</th><th class="delete-tab">Delete</th></tr>
-    </thead>
-    <tbody id="cont-files">
-    </tbody>
+  </tr>
+  <tr><td><label for="newfile">Upload a file</label></td></tr>
+  <tr><td><input id="filepath" type="hidden"></td></tr>
+  <tr><td><input id="newfile" type="file" onchange="setpath()"></td></tr>
+  <tr><td><button id="upload" type="button" onclick="upload()">Upload</button>
+  <input id="reload" type="button" value="Reload Page" onClick="history.go(0)"></td></tr>
+  </td>
+  </tr>
+  </tr>
   </table>
-  <br />
+  <br>
+  <br>
+  <table width="80%" class="fixed" border="1">
+  <thead>
+  <tr><th>Name</th><th>Type</th><th>Size (Bytes)</th><th class="payload-run">Run Payload</th><th class="payload-viewer">Payload Code</th><th class="delete-tab">Delete</th></tr>
+  </thead>
+  <tbody id="cont-files">
+  </tbody>
+  </table>
+  <br>
+  <br>
   <div>
-    <div id="fs-name"> <button id="fs-sd" data-name="sd">SD</button>  <button id="fs-spiffs" data-name="spiffs">SPIFFS</button> </div>
+  <table id="filesystemlogs" width="50%" border="0">
+  <th><div id="fs-name"> <button id="fs-sd" data-name="sd">SD</button> <button id="fs-spiffs" data-name="spiffs">SPIFFS</button><br><br><div id="logs" style="white-space:pre"></div></div></th>
+  </table>
   </div>
-  <div id="logs" style="white-space:pre"></div>
-</div>
+  </div>
 </body>
 <script>
-
 
 var sdBtn     = document.querySelector('#fs-sd');
 var spiffsBtn = document.querySelector('#fs-spiffs');
@@ -227,16 +354,20 @@ function upload() {
 
               if( (i.name).match(/quack/) ) {
                 links = `🦆 <a href="${i.name}">${i.name.substring(1)}</a> `
-                          + ` [<a class="payload-runner" href="/runpayload?file=${i.name}">Run</a>] `
-                          + ` [<a class="payload-viewer" href="${i.name}">View</a>] `
+                         /* + ` [<a class="payload-runner" href="/runpayload?file=${i.name}">Run</a>] `
+                          + ` [<a class="payload-viewer" href="${i.name}">View</a>] `*/
                 ;
               } else {
                 links = ` <a href="${i.name}">${i.name.substring(1)}</a> `;
               }
               cont.innerHTML +=
-                `<tr>
+                 `<tr>
                   <td>${links}</td> <td>${i.type}</td> <td>${i.size}</td>
+
+                  <td><a class="payload-runner" href="/runpayload?file=${i.name}"><button type="submit">Run Payload</button></a></td>
+                  <td><a class="payload-viewer" href="${i.name}"><button type="submit">Payload Code</button></a></td>
                   <td class="delete-tab"><form method="post" action="/delete"><input type="hidden" name="dir" value="${i.name}"><button type="submit">Delete</button></form></td>
+
                 </tr>`;
             });
           } else document.body.innerHTML += "No file list container";

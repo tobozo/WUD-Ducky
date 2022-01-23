@@ -29,7 +29,7 @@
 //  - SPIFFS upload can't work with a serial console open while flashing does
 //  - Annoying failed reset followind successful SPIFFS upload on WUD increments the ttyACMx device number and has Arduino IDE auto selection fail, producing a false negative
 //  - Updating index.html and the webserver logic requires two flashing operations, one of which is disruptive in the development flow
-//  - Static files can't do templating without ram allocation, also at the time of writing this comment, sketch uses 58% of program storage space, so there's plenty of room
+//  - Static files can't do templating without ram allocation, also at the time of writing this comment, sketch uses 60% of program storage space, so there's plenty of room
 //  - Easy maintenance: just enable syntax highlighting for HTML and ignore the C header/footer of this file
 
 const char* index_html = R"indexHTML(
@@ -45,135 +45,133 @@ const char* index_html = R"indexHTML(
   <meta charset="utf-8">
   <style>
 
-    #fs-name::before { display:inline-block;content:"Filesystem:"; }
-    #fs-name button { color: #ff6a3d; }
-    #fs-name button::before { display:inline-block;content:"Switch to:"; }
-    #fs-name button.enabled::before { display:inline-block;content:"Using:"; }
-    #fs-name button.enabled { color: #f4db7d; pointer-events:none; border-color: #f4db7d; background: #585858; }
-    #logs::before { display:block;content:"System Logs:"; }
+    body, h1, h2, h3, p, div { font-family: courier, courier-new, sans-serif; }
 
+    #filesystem-tab::before { display:inline-block;content:"Filesystem:"; }
+    #filesystem-tab button { color: #ff6a3d; }
+    #filesystem-tab button::before { display:inline-block;content:"Switch to:"; }
+    #filesystem-tab button.enabled::before { display:inline-block;content:"Using:"; }
+    #filesystem-tab button.enabled { color: #f4db7d; pointer-events:none; border-color: #f4db7d; background: #585858; }
+    #logs::before { display:block;content:"System Logs:"; }
     .nodelete .delete-tab, .nodelete #uploader-tab { display:none; }
 
-  @media (max-width: 1080px) {
-    body{
-       width: 100%;
+
+    @media (max-width: 1080px) {
+      body{
+        width: 100%;
       }
-    input[type="file"]{
-       background-color: #394f8a;
-       color: #ffffff;
-       width: 85%;
+      input[type="file"] {
+        background-color: #394f8a;
+        color: #ffffff;
+        width: 85%;
       }
 
-    #fs-name button{
-       border-bottom: #f4db7d;
-       width: 120px;
-       height: 30px;
+      #filesystem-tab button {
+        border-bottom: #f4db7d;
+        width: 120px;
+        height: 30px;
       }
 
-    button{
+      button {
+        background-color: #394f8a;
+        color: #ff6a3d;
+        width:80px;
+        height:30px;
+      }
+
+      #logs {
+        background:#0f213b;
+        box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+        height: 480px;
+        width: 400px;
+        overflow-y: scroll;
+        text-align: left;
+      }
+
+      .payload-runner .payload-viewer .delete-tab {
+        width: 60%;
+      }
+
+      .fixed {
+        margin: 0 auto;
+        border-collapse: collapse;
+      }
+    }
+
+    /* removing this directive, too wide, also getting rid of any vendor-prefixed directive */
+    /*
+    * {
+      background-color: #1a2238;
+      border-radius: 7px 10px 7px 10px;
+      -webkit-border-radius: 7px 10px 7px 10px;
+      -moz-border-radius: 7px 10px 7px 10px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      border-color: #394f8a;
+      color: #ff6a3d;
+    }
+    */
+
+    #filesystem-tab button {
+      border-bottom: #f4db7d;
+      width: 120px;
+      height: 30px;
+    }
+
+    input {
+      background-color: #394f8a;
+      color: #ffffff;
+      width: 22%;
+    }
+
+    button {
       background-color: #394f8a;
       color: #ff6a3d;
-      width:80px;
+      width:100px;
       height:30px;
     }
 
-    #logs{
-      background:#0f213b;
-      -moz-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
-      -webkit-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
+    #reload {
+      background-color: #394f8a;
+      color: #ff6a3d;
+      width:100px;
+      height:30px;
+    }
+
+    h2 {
       box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
-      height: 480px;
-      width: 400px;
-      overflow-y: scroll;
+      color: #ffffff;
+      font-size: 35px;
+      text-transform: uppercase;
+      background-color:#424242;
+      border-bottom: 3px solid #ff6a3d;
+      text-align: center;
+    }
+
+    label {
+      color: #ffffff;
+      text-align: right;
+    }
+
+    td {
+      text-align: center;
+    }
+
+    #logs {
+      background:#0f213b;
+      box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
       text-align: left;
+      height: 480px;
+      overflow-y: scroll;
     }
 
-    .payload-runner .payload-viewer .delete-tab{
-      width: 60%;
-    }
-
-    .fixed{
+    #filesystemlogs {
+      background: #394f8a;
       margin: 0 auto;
       border-collapse: collapse;
-     }
-  }
-
-    *{
-     background-color: #1a2238;
-     border-radius: 7px 10px 7px 10px;
-     -webkit-border-radius: 7px 10px 7px 10px;
-     -moz-border-radius: 7px 10px 7px 10px;
-     -webkit-font-smoothing: antialiased;
-     -moz-osx-font-smoothing: grayscale;
-     border-color: #394f8a;
-     color: #ff6a3d;
     }
 
-    #fs-name button{
-     border-bottom: #f4db7d;
-     width: 120px;
-     height: 30px;
-    }
-
-     input{
-     background-color: #394f8a;
-     color: #ffffff;
-     width: 22%;
-    }
-
-    button{
-     background-color: #394f8a;
-     color: #ff6a3d;
-     width:100px;
-     height:30px;
-    }
-
-    #reload{
-     background-color: #394f8a;
-     color: #ff6a3d;
-     width:100px;
-     height:30px;
-    }
-
-    h2{
-     font-family: courier, courier-new, serif;
-     -moz-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
-     -webkit-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
-     box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
-     color: #ffffff;
-     font-size: 35px;
-     text-transform: uppercase;
-     background-color:#424242;
-     border-bottom: 3px solid #ff6a3d;
-     text-align: center;
-    }
-
-    label{
-     color: #ffffff;
-     text-align: right;
-    }
-
-    td{
-     text-align: center;
-    }
-
-    #logs{
-     background:#0f213b;
-     -moz-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
-     -webkit-box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
-     box-shadow:inset 0px 0px 3px 1px rgba(0,0,0,1);
-     text-align: left;
-     height: 480px;
-     overflow-y: scroll;
-    }
-
-    #filesystemlogs{
-     background: #394f8a;
-     margin: 0 auto;
-     border-collapse: collapse;
-    }
-
-    .fixed{
+    .fixed {
       margin: 0 auto;
       border-collapse: collapse;
     }
@@ -182,45 +180,31 @@ const char* index_html = R"indexHTML(
 </head>
 <body>
 <div class="main">
-  <table width="100%" class="fixed" border="0">
-  <tr>
-  <td>
-  <h2>WUD Ducky Payload Runner</h2>
-  </td>
-  <td id="uploader-tab">
-  <table border="0">
-  <tr>
-  </tr>
-  <tr>
-  </tr>
-  </table>
-  </tr>
-  <tr><td><label for="newfile">Upload a file</label></td></tr>
-  <tr><td><input id="filepath" type="hidden"></td></tr>
-  <tr><td><input id="newfile" type="file" onchange="setpath()"></td></tr>
-  <tr><td><button id="upload" type="button" onclick="upload()">Upload</button>
-  <input id="reload" type="button" value="Reload Page" onClick="history.go(0)"></td></tr>
-  </td>
-  </tr>
-  </tr>
-  </table>
-  <br>
-  <br>
+  <div class="fixed">
+    <h2>WUD Ducky Payload Runner</h2>
+    <div id="filesystem-tab"> <button id="fs-sd" data-name="sd">SD</button> <button id="fs-spiffs" data-name="spiffs">SPIFFS</button></div>
+    <div id="uploader-tab">
+      <label for="newfile">Upload a file</label>
+      <input id="filepath" type="hidden">
+      <input id="newfile" type="file" onchange="setpath()">
+      <button id="upload" type="button" onclick="upload()">Upload</button><input id="reload" type="button" value="Reload Page" onClick="history.go(0)">
+    </div>
+  </div>
   <table width="80%" class="fixed" border="1">
-  <thead>
-  <tr><th>Name</th><th>Type</th><th>Size (Bytes)</th><th class="payload-run">Run Payload</th><th class="payload-viewer">Payload Code</th><th class="delete-tab">Delete</th></tr>
-  </thead>
-  <tbody id="cont-files">
-  </tbody>
+    <thead><tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>Size (Bytes)</th>
+      <th class="payload-run">Run Payload</th>
+      <th class="payload-viewer">Payload Code</th>
+      <th class="delete-tab">Delete</th>
+    </tr></thead>
+    <tbody id="cont-files"></tbody>
   </table>
-  <br>
-  <br>
-  <div>
-  <table id="filesystemlogs" width="50%" border="0">
-  <th><div id="fs-name"> <button id="fs-sd" data-name="sd">SD</button> <button id="fs-spiffs" data-name="spiffs">SPIFFS</button><br><br><div id="logs" style="white-space:pre"></div></div></th>
-  </table>
+  <div id="filesystemlogs">
+    <div id="logs" style="white-space:pre"></div>
   </div>
-  </div>
+</div>
 </body>
 <script>
 
@@ -229,7 +213,8 @@ var spiffsBtn = document.querySelector('#fs-spiffs');
 var mainDiv   = document.querySelector('div.main');
 
 
-function loadLogs() {
+function loadLogs()
+{
   var xh = new XMLHttpRequest();
   xh.onreadystatechange = () => {
     if (xh.readyState == 4 && xh.status == 200) {
@@ -246,8 +231,8 @@ function loadLogs() {
 };
 
 
-
-function changeFS( newfs ) {
+function changeFS( newfs )
+{
   var xh = new XMLHttpRequest();
   xh.onreadystatechange = () => {
     if (xh.readyState == 4 && xh.status == 200) {
@@ -260,19 +245,22 @@ function changeFS( newfs ) {
 
 
 
-function onFSBtnClick( btn ) {
+function onFSBtnClick( btn )
+{
   if( !btn.className.match(/enabled/) ) {
     changeFS( btn.dataset.name );
   }
 }
 
 
-function setpath() {
+function setpath()
+{
   var default_path = document.getElementById("newfile").files[0].name;
   document.getElementById("filepath").value = default_path;
 }
 
-function upload() {
+function upload()
+{
   var filePath = document.getElementById("filepath").value;
   var upload_path = "/upload";
   var fileInput = document.getElementById("newfile").files;
@@ -333,7 +321,7 @@ function upload() {
         var res = JSON.parse(xh.responseText);
         if( res ) {
           var cont = document.querySelector('#cont-files');
-          var sta = document.querySelector('#fs-name');
+          var sta = document.querySelector('#filesystem-tab');
           if( sta ) {
             if( res.filesystem ) {
               switch( res.filesystem ) {
@@ -346,7 +334,7 @@ function upload() {
               sdBtn.onclick     = () => { onFSBtnClick(sdBtn) };
               spiffsBtn.onclick = () => { onFSBtnClick(spiffsBtn) };
             } else sta.innerHTML = "No filesystem info in JSON";
-          } else document.body.innerHTML += "Can't find fs-name div";
+          } else document.body.innerHTML += "Can't find filesystem-tab div";
           if( cont ) {
             cont.innerHTML = '';
             res.files.forEach(i => {
@@ -361,14 +349,14 @@ function upload() {
                 links = ` <a href="${i.name}">${i.name.substring(1)}</a> `;
               }
               cont.innerHTML +=
-                 `<tr>
-                  <td>${links}</td> <td>${i.type}</td> <td>${i.size}</td>
-
+               `<tr>
+                  <td>${links}</td>
+                  <td>${i.type}</td> <td>${i.size}</td>
                   <td><a class="payload-runner" href="/runpayload?file=${i.name}"><button type="submit">Run Payload</button></a></td>
                   <td><a class="payload-viewer" href="${i.name}"><button type="submit">Payload Code</button></a></td>
                   <td class="delete-tab"><form method="post" action="/delete"><input type="hidden" name="dir" value="${i.name}"><button type="submit">Delete</button></form></td>
-
-                </tr>`;
+               </tr>`
+              ;
             });
           } else document.body.innerHTML += "No file list container";
         } else document.body.innerHTML += "JSON PARSING FAILED";

@@ -10,7 +10,7 @@ The payload syntax is heavily inspired by [whid-injector](https://github.com/whi
 
  - Dongle is detected as Mouse, Keyboard and USB Pendrive
  - Mouse driver uses absolute positioning
- - Mounted MicroSD card allows editing files from the OS, and reading from the ESP
+ - Mounted MicroSD card allows editing files from the OS, ~~and~~ or reading from the ESP
  - Starts WiFi in AP Mode
  - Runs a Webserver with the following endpoints:
    - `/key` send string sequence to the keyboard
@@ -21,8 +21,8 @@ The payload syntax is heavily inspired by [whid-injector](https://github.com/whi
    - `/delete` delete a file
    - `/upload` upload a file
    - `/*` serves the file from the selecte filesystem
- - Accepts the following ducky commands:
-   - `Rem`
+ - Implements **[SpaceHuhn's WiFiDuck commands](https://github.com/SpacehuhnTech/WiFiDuck#scripting)**, but also comes with a few extras for mouse controls:
+   - `help` : list all non standard ducky commands
    - `logs` : show last logs
    - `SetDisplay` [uint16_t+uint16_t] set display dimensions for mouse e.g. `SetDisplay:1920+1080`
    - `DrawSpaceInvaders` : draw space invaders with the mouse, needs paint software full screen with brush preselected
@@ -31,18 +31,28 @@ The payload syntax is heavily inspired by [whid-injector](https://github.com/whi
    - `MouseClickLEFT` : pushes left button, call MouseClickRelease to release
    - `MouseClickMIDDLE` : pushes middle button, call MouseClickRelease to release
    - `MouseDoubleClickLEFT` : does not need MouseClickRelease
-   - `DefaultDelay` [uint32_t] set default delay between commands
-   - `CustomDelay` [uint32_t] set custom delay between commands
-   - `KeyDelay` [uint32_t] set delay between keys
-   - `Key` [keycode] send a keycode
    - `MouseMoveUp` [int8_t] move n pixels to the top, relative to last position, from -127 to 127
    - `MouseMoveDown` [int8_t] move n pixels to the bottom, relative to last position, from -127 to 127
    - `MouseMoveLeft` [int8_t] move n pixels to the left, relative to last position, from -127 to 127
    - `MouseMoveRight` [int8_t] move n pixels to the roght, relative to last position, from -127 to 127
-   - `Press` [keycode+keycode+keycode....] keyboard shortcuts e.g. KEY_LEFT_CTRL+KEY_LEFT_ALT+KEY_DELETE => `Press:128+130+212`
-   - `Print` [String] send sentence to keyboard
-   - `PrintLine` [String] (same as Print but HID_KEY_ENTER appended)
-   - [soon] ~~`MouseDrawStr` [coord+mousestate+coord+coord....] mouse moves/clics in a string e.g. `MouseDrawStr:X127+Y-127+C1+X127+Y127+Y127+C0+X-127+X-127+C1+X127+X127`~~
+ - The following custom commands are also internally used at setup/boot, and kept exposed for debug or development:
+   - `SerialBegin` : start the serial interface
+   - `SerialDebug` : enable debug on serial
+   - `InitWiFi` : start wifi (implicit)
+   - `InitSPIFFS` : start SPIFFS (implicit)
+   - `InitSD` : start SD card (implicit)
+   - `InitPenDrive` : start USB PenDrive (implicit)
+   - `StopSD` : stop SD card (experimental)
+   - `StopPenDrive` : stop USB Pendrive (experimental)
+   - `InitKeyboard` : start USB Keyboard (implicit)
+   - `InitMouse` : start USB mouse (implicit)
+   - `StartUSB` : start USB (implicit)
+   - `StartWebServer` : start web server (implicit)
+   - `StopSerial` : stop serial
+   - `StopWiFi` : stop WiFi
+   - `StopKeyboard` : stop USB Keyboard (experimental)
+   - `StopMouse` : stop USB Mouse (experimental)
+
  - Comes with many bugs but also with an easter egg
 
 
@@ -74,7 +84,7 @@ See the [wiki page](https://wiki.aprbrother.com/en/wud.html) for more info.
 
 ## Why Arduino?
 
- - Because [platformio POC](https://github.com/volca/wireless_usb_disk) only works with older packages e.g. EspTinyUSB 1.2.0 / idf 4.2
+ - Because [platformio POC](https://github.com/volca/wireless_usb_disk) only works with older packages e.g. EspTinyUSB 1.2.0 / idf 4.2 or lags behind
  - Because I'm lazy
 
 ## Roadmap
@@ -82,6 +92,7 @@ See the [wiki page](https://wiki.aprbrother.com/en/wud.html) for more info.
  - Improved payload parser
  - Improved web UI
  - Add RNDIS/CDC-ECM (network interface)
+ - More lambda ducky commands (e.g. read exfiltrated data from USBSerial)
 
 
 ## Credits:

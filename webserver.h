@@ -115,7 +115,7 @@ void handleFileUpload()
     if (!filename.startsWith("/")) {
       filename = "/" + filename;
     }
-    log_d("Receiving file: %s", filename.c_str() );
+    WebServerLogMsg("Receiving file: "+filename );
     fsUploadFile = duckyFS->open(filename, "w");
     filename = String();
   } else if (upload.status == UPLOAD_FILE_WRITE) {
@@ -126,7 +126,7 @@ void handleFileUpload()
     if (fsUploadFile) {
       fsUploadFile.close();
     }
-    log_d("File Size: %d", upload.totalSize);
+    WebServerLogMsg("File Size: " + String( upload.totalSize ));
     WebServerLogMsg("File uploaded successfully");
   }
 }
@@ -136,7 +136,7 @@ bool handleFileRead(String path)
 {
   if (path.endsWith("/")) {
     handleIndex();
-    log_d("Serving file: %s", path.c_str() );
+    WebServerLogMsg("Serving file: "+path );
     return true;
   } else {
     String contentType = getContentType(path);
@@ -154,7 +154,7 @@ bool handleFileRead(String path)
         server.streamFile(file, contentType);
       }
       file.close();
-      log_d("Served path from %s: %s", duckyFS != &SPIFFS ? "SD":"SPIFFS", path.c_str() );
+      //log_d("Served path from %s: %s", duckyFS != &SPIFFS ? "SD":"SPIFFS", path.c_str() );
       return true;
     } else { // not on the ducky filesystem
       if( duckyFS != &SPIFFS ) { // ducky filesystem was SD, now check SPIFFS
@@ -167,7 +167,7 @@ bool handleFileRead(String path)
           fs::File file = SPIFFS.open(path.c_str());
           server.streamFile(file, contentType);
           file.close();
-          log_d("Served path from SPIFFS: %s", path.c_str() );
+          //log_d("Served path from SPIFFS: %s", path.c_str() );
           return true;
         }
       }
@@ -183,7 +183,7 @@ void handleFileDelete()
     return server.send(500, "text/plain", "BAD ARGS");
   }
   String path = server.arg(0);
-  log_d("Deleting file: %s", path.c_str() );
+  //log_d("Deleting file: %s", path.c_str() );
   if (path == "/") {
     return server.send(500, "text/plain", "BAD PATH");
   }
@@ -191,7 +191,7 @@ void handleFileDelete()
     return server.send(404, "text/plain", "FileNotFound");
   }
   duckyFS->remove(path);
-  WebServerLogMsg("File deleted successfully");
+  WebServerLogMsg("File "+path+" deleted successfully");
   server.sendHeader("Location", String("/"), true);
   server.send(302, "text/plain", "");
   path = String();
@@ -207,7 +207,7 @@ void handleFileList()
     path = server.arg("dir");
   }
 
-  log_d("Listing files from: %s", path);
+  //log_d("Listing files from: %s", path);
 
   fs::File root = duckyFS->open(path);
 
@@ -235,7 +235,7 @@ void handleFileList()
   }
   output += "]}";
   server.send(200, "text/json", output);
-  log_d("SENT JSON: %s\n", output.c_str() );
+  //log_d("SENT JSON: %s\n", output.c_str() );
 }
 
 
@@ -245,7 +245,7 @@ void handleKeySend()
     return server.send(500, "text/plain", "MISSING ARGS");
   }
   String path = server.arg(0);
-  log_d("Sending Keys: %s\\n", path.c_str() );
+  //log_d("Sending Keys: %s\\n", path.c_str() );
   if( HIDKeySender) HIDKeySender( path+"\n");
   server.send(200, "text/plain", path);
   path = String();
@@ -288,8 +288,10 @@ void handleChangeFS()
   String response = "Filesystem changed to " + fsname + " successfully";
   if( fsname == "spiffs" ) {
     duckyFS = &SPIFFS;
+#ifdef HAS_PENDRIVE
   } else  if( fsname == "sd" ) {
     duckyFS = &SD;
+#endif
   } else {
     response = "Unknown filesystem";
   }

@@ -60,6 +60,7 @@
   #error "This project needs CONFIG_TINYUSB_ENABLED in sdkconfig"
 #endif
 
+
 // check that required Arduino menu options are present
 #if !defined ARDUINO_USB_CDC_ON_BOOT
   #error "ARDUINO_USB_CDC_ON_BOOT build option is missing"
@@ -82,3 +83,17 @@
 #if ARDUINO_USB_DFU_ON_BOOT!=0
   #error "The menu option 'Tools / USB DFU On Boot' should be disabled!"
 #endif
+
+
+#if (ARDUINO_USB_CDC_ON_BOOT|ARDUINO_USB_MSC_ON_BOOT|ARDUINO_USB_DFU_ON_BOOT)
+  #if !defined ARDUINO_ESP32S2_WUD
+    #warning "Using default USB VendorID and ProductID"
+  #endif
+#endif
+
+#include <vector>
+#include <SD.h>
+#include "logger.h"
+#include "WiFiDuck/config.h"
+//#include "led_controls.h"
+

@@ -32,17 +32,15 @@
 \*/
 
 
-// Config SSID and password for access point
-const char* SSID        = "WUD-01";
-const char* PASSWORD    = "12345678";
-
-#define DEBUG
-#include <vector>
 #include "config_check.h"
-#include <SD.h>
 #include "WiFiDuck/duckparser.cpp" // SpaceHuhn's WiFiDuck implementation, with some mouse tweaks
 #include "webserver.h"
-#include "xbm/alien.xbm.h"
+
+#if ARDUINO_USB_CDC_ON_BOOT
+  static bool serial_begun = true;
+#else
+  static bool serial_begun = false;
+#endif
 
 // Cursing after that Serial0/Serial/USBCDC unintuitive example from the official USB library:
 #if ARDUINO_USB_CDC_ON_BOOT
@@ -52,113 +50,21 @@ const char* PASSWORD    = "12345678";
   #define HWSerial Serial
   USBCDC USBSerial;
 #endif
-// 1) Both Serial USB and UART can be considered hardware
-// 2) Which of both Serial interfaces is relevant for debugging? your guess
-// 3) Why use two Serial interfaces? because reasons
-// 4) Also using defines for that is such a poor choice, C++ can do better than this
+// While this covers about all in terms of exhibiting the different flavours of Serial
+// with or without USB, the mix of defines, objects and prefixes is more than confusing,
+// and the resulting behaviour is opaque.
+// 1) Both Serial USB and UART can be considered hardware.
+// 2) Which of both Serial interfaces is relevant for debugging? your guess :-)
+// 3) Why most USB examples from the official librayr use two Serial interfaces?
+// 4) Using defines for that is such a poor choice, C++ can do so much better than this.
+// 5) Enabling ARDUINO_USB_CDC_ON_BOOT starts USB before the setup() is reached
 
-
-// some easter egg to test the mouse in absolute positioning mode
-xbmImage_t Alien_128x64 =
-{
-  alien_width,
-  alien_height,
-  alien_bytes,
-  alien_bytes_per_row,
-  Alien_128x64_bits
-};
 
 // floating filesystem
 fs::FS* duckyFS = nullptr;
-// log messages and utilities
-std::vector<String> dmesg;
-typedef void(*logprintercb)( String msg );
-
-bool serial_begun = false;
 
 
-void logmsg( String msg )
-{
-  // format date and prefix message, and why strftime is useless
-  char strftime_buf[64];
-  uint32_t now = millis();
-  uint32_t s = now/1000;
-  uint32_t m = now/60000;
-  uint32_t h = now/(60000*60);
-  uint32_t S  = s%60;
-  uint32_t M  = m%60;
-  uint32_t H  = h%60;
-  uint32_t SS = now%1000;
-  sprintf(strftime_buf, "%02d:%02d:%02d.%03d", H, M, S, SS );
-  msg = "[@" + String( strftime_buf) + "] " + msg;
-  dmesg.push_back( msg );
-}
 
-
-void printdmesg( logprintercb logprint, bool clear_after=true )
-{
-  if( dmesg.size() > 0 ) {
-    for( int i=0; i<dmesg.size(); i++ ) {
-      logprint( dmesg[i] );
-    }
-    if( clear_after ) dmesg.clear();
-  }
-}
-
-
-void logsprintf( const char *fmt, ... )
-{
-  char buf[256];
-  va_list va;
-  va_start (va, (char*)fmt);
-  vsnprintf (buf, 256, fmt, va);
-  va_end (va);
-  logmsg( String( buf ) );
-}
-
-
-void serialprintln(String msg)
-{
-  Serial.println( msg );
-}
-
-
-static void usbEventCallback(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
-{
-  if(event_base == ARDUINO_USB_EVENTS){
-    arduino_usb_event_data_t * data = (arduino_usb_event_data_t*)event_data;
-    switch (event_id){
-      case ARDUINO_USB_STARTED_EVENT: logmsg("USB PLUGGED"); break;
-      case ARDUINO_USB_STOPPED_EVENT: logmsg("USB UNPLUGGED"); break;
-      case ARDUINO_USB_SUSPEND_EVENT: logmsg( String( "USB SUSPENDED: remote_wakeup_en: " + String( data->suspend.remote_wakeup_en ) ) ); break;
-      case ARDUINO_USB_RESUME_EVENT: logmsg("USB RESUMED"); break;
-      default: break;
-    }
-  } else if(event_base == ARDUINO_USB_CDC_EVENTS) {
-    arduino_usb_cdc_event_data_t * data = (arduino_usb_cdc_event_data_t*)event_data;
-    switch (event_id){
-      case ARDUINO_USB_CDC_CONNECTED_EVENT: logmsg("CDC CONNECTED"); break;
-      case ARDUINO_USB_CDC_DISCONNECTED_EVENT: logmsg("CDC DISCONNECTED"); break;
-      case ARDUINO_USB_CDC_LINE_STATE_EVENT: logsprintf("CDC LINE STATE: dtr: %u, rts: %u", data->line_state.dtr, data->line_state.rts); break;
-      case ARDUINO_USB_CDC_LINE_CODING_EVENT: logsprintf("CDC LINE CODING: bit_rate: %u, data_bits: %u, stop_bits: %u, parity: %u", data->line_coding.bit_rate, data->line_coding.data_bits, data->line_coding.stop_bits, data->line_coding.parity); break;
-      case ARDUINO_USB_CDC_RX_EVENT: /* USBSerial.read(buf, data->rx.len); */ break;
-      default: break;
-    }
-  } else if(event_base == ARDUINO_USB_HID_EVENTS){
-    arduino_usb_hid_event_data_t * data = (arduino_usb_hid_event_data_t*)event_data;
-    switch (event_id){
-      case ARDUINO_USB_HID_SET_PROTOCOL_EVENT: logsprintf("HID SET PROTOCOL: %s", data->set_protocol.protocol?"REPORT":"BOOT"); break;
-      case ARDUINO_USB_HID_SET_IDLE_EVENT: logsprintf("HID SET IDLE: %u", data->set_idle.idle_rate); break;
-      default: break;
-    }
-  } else if(event_base == ARDUINO_USB_HID_KEYBOARD_EVENTS){
-    arduino_usb_hid_keyboard_event_data_t * data = (arduino_usb_hid_keyboard_event_data_t*)event_data;
-    switch (event_id){
-      case ARDUINO_USB_HID_KEYBOARD_LED_EVENT: logsprintf("HID KEYBOARD LED: NumLock:%u, CapsLock:%u, ScrollLock:%u", data->numlock, data->capslock, data->scrolllock); break;
-      default: break;
-    }
-  }
-}
 
 
 static void WiFiEventCallback(WiFiEvent_t event)
@@ -178,7 +84,7 @@ static void WiFiEventCallback(WiFiEvent_t event)
 }
 
 
-
+/*
 // some USB-dependant callbacks to attach
 
 void MouseDrawer( char* chunk )
@@ -206,109 +112,121 @@ void MouseDrawer( char* chunk )
     break;
   }
 }
+*/
 
 
-
-// WUD-Ducky functionalities as Ducky Commands in a lambda functions array
-// A few are still missing, such as ESP-Restart, AP controls, debug, etc
-duckCommand DuckyCommands[] =
+void SerialPrintHelp()
 {
-  {"SerialBegin", [](){
-      Serial.begin(115200);
-      serial_begun = true;
-      //Serial.setDebugOutput(true);
-      delay(5000);
-    }
-  },
-  {"SerialDebug", [](){
-      static bool debug_enabled = false;
-      debug_enabled = !debug_enabled;
-      Serial.setDebugOutput(debug_enabled); // doing this may cause instability, use only for debug and expect more bugs :-)
-      logsprintf("setDebugOutput(%s)", debug_enabled?"true":"false");
-    }
-  },
-  {"InitWiFi", [](){ WiFi.mode(WIFI_AP); WiFi.softAP(SSID, PASSWORD);  } },
-  {"InitSPIFFS", [](){ if( !SPIFFS.begin() ) logmsg("SPIFFS failed!"); } },
-#ifdef HAS_PENDRIVE
-  {"InitSD", [](){ if( !initSD() ) duckyFS = &SPIFFS; else duckyFS = &SD; } },
-  {"InitPenDrive", [](){ initPenDrive(); } },
-  {"StopSD", [](){ deinitSD(); } },
-  {"StopPenDrive", [](){  deinitPenDrive(); } },
-#else // SD not exposed as pendrive, currently used for QA testing
-  {"InitSD", [](){
-      // Config SD Card
-      #define SD_MISO  37
-      #define SD_MOSI  35
-      #define SD_SCK   36
-      #define SD_CS    34
+  using namespace duckparser;
+  Serial.println("Legacy WiFiDuck named keys:");
+  for( int i=0;i<keys->count;i++ ) {
+    if( i%8==0 ) Serial.println();
+    Serial.printf(" %-12s", keys->commands[i].name );
+  }
+  Serial.println("\n");
+  Serial.println("Legacy WiFiDuck commands:");
+  Serial.println("  - REM");
+  Serial.println("  - STRING");
+  for( int i=0;i<legacy_commands->count;i++ ) {
+    Serial.printf("  - %s\n", legacy_commands->commands[i].name );
+  }
+  Serial.println();
+  Serial.println("WUD Ducky commands:");
+  for( int i=0;i<custom_commands->count;i++ ) {
+    Serial.printf("  - %s\n", custom_commands->commands[i].name );
+  }
+  Serial.println();
+  return;
+}
 
-      static bool sd_begun = false;
 
-      SPIClass * spi = = new SPIClass(FSPI);
-      //spi = new SPIClass(HSPI);
-      spi->setFrequency(4000000);
+void SerialBegin()
+{
+  if( serial_begun ) {
+    logmsg("Serial already started");
+    return;
+  }
+  Serial.begin(115200);
+  serial_begun = true;
+  //Serial.setDebugOutput(true);
+}
 
-      spi->begin(SD_SCK, SD_MISO, SD_MOSI, -1);
+void SerialDebug()
+{
+  static bool debug_enabled = false;
+  debug_enabled = !debug_enabled;
+  Serial.setDebugOutput(debug_enabled); // doing this may cause instability, use only for debug and expect more bugs :-)
+  logsprintf("setDebugOutput(%s)", debug_enabled?"true":"false");
+}
 
-      // trying random shit before calling sd.begin
-      spi->transfer(0);
-      spi->transfer(0);
-      delay(100);
+void InitWiFi()
+{
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(SSID, PASSWORD);
+}
 
-      uint8_t attempts = 0;
-      uint8_t maxattempts = 10;
+void InitSPIFFS()
+{
+  if( !SPIFFS.begin() ) logmsg("SPIFFS failed!");
+}
 
-      // hammering the SD is necessary since SD.h was fucked up (2.0.2)
-      do {
-        sd_begun = SD.begin(SD_CS, *spi, 4000000);
-        if(sd_begun) break;
-        logmsg("Card Mount attempt: " + String(attempts));
-        vTaskDelay(100);
-      } while( attempts++ <= maxattempts );
+void InitSD()
+{
+  if( !initSD() ) duckyFS = &SPIFFS;
+  else duckyFS = &SD;
+}
 
-      if( !sd_begun) {
-        logmsg("Card Mount Failed");
-        return;// true;
-      }
+void InitMouse()
+{
+  AbsMouse.begin();
+  MouseGFX = new GfxMouse( &AbsMouse );
+  MouseGFX->setDisplay( 1920*2, 1080 );
+}
 
-      uint8_t cardType = SD.cardType();
+void StartUSB()
+{
+  #if (ARDUINO_USB_CDC_ON_BOOT|ARDUINO_USB_MSC_ON_BOOT|ARDUINO_USB_DFU_ON_BOOT)
+    // USB was already started by arduino core
+    logmsg("USB already started");
+    while( !HID.ready() ) vTaskDelay(1);
+    return;
+  #else
+    USB.VID( USB_VID );
+    USB.PID( USB_PID );
+    USB.productName( USB_PRODUCT );
+    USB.manufacturerName( USB_MANUFACTURER );
+    USB.serialNumber( USB_SERIAL );
+    if( !USB.begin() ) logmsg("USB Failed to start");
+    else { while( !HID.ready() ) vTaskDelay(1);  };
+  #endif
+}
 
-      if(cardType == CARD_NONE){
-        logmsg("No SD card attached");
-        //log_e("No SD card attached");
-        return;// true;
-      }
 
-      Serial.setDebugOutput(true);
 
-      String test;
-      for( int i=0;i<16384;i++ ) {
-        test += (char)random(255);
-      }
 
-      for( int i=0;i<50;i++ ) {
-        Serial.printf("Pass #%d\n", i );
-        fs::File blah = SD.open("/test.txt", FILE_WRITE );
-        blah.write( (uint8_t*)test.c_str(), test.length()+1 );
-        blah.close();
-      }
 
-      Serial.setDebugOutput(false);
-
-      return;// true;
-    }
-  },
-#endif
-  {"InitKeyboard", [](){ Keyboard.begin(); } },
-  {"InitMouse", [](){ AbsMouse.begin(); MouseGFX = new GfxMouse( &AbsMouse ); MouseGFX->setDisplay( 1920*2, 1080 ); } },
-  {"StartUSB", [](){ if( !USB.begin() ) logmsg("USB Failed to start"); else { while( !HID.ready() ) vTaskDelay(1);  }; } },
-  {"StartWebServer", [](){ startWebServer(); } },
-  {"StopSerial", [](){ Serial.end(); } },
-  {"StopWiFi", [](){ WiFi.mode(WIFI_OFF); } },
-  {"StopKeyboard", [](){ Keyboard.end(); } },
-  {"StopMouse", [](){ AbsMouse.end(); } },
-  {"DrawSpaceInvaders", [](){ MouseGFX->drawXbm( &Alien_128x64, 900, 500 ); } },
-  {"logs", [](){ printdmesg( serialprintln ); } },
+// WUD-Ducky system functionalities as Ducky Commands in a mix of real and lambda functions array.
+// A few are still missing, such as ESP-Restart, AP controls, debug, etc
+duckCommand WUDDuckCommands[] =
+{
+  { "help",              SerialPrintHelp,                      false },
+  { "SerialBegin",       SerialBegin,                          false },
+  { "SerialDebug",       SerialDebug,                          false },
+  { "StopSD",            deinitSD,                             false },
+  { "StopPenDrive",      deinitPenDrive,                       false },
+  { "StartUSB",          StartUSB,                             false },
+  { "InitWiFi",          InitWiFi,                             false },
+  { "InitSPIFFS",        InitSPIFFS,                           false },
+  { "InitSD",            InitSD,                               false },
+  { "InitMouse",         InitMouse,                            false },
+  { "InitPenDrive",      [](){ initPenDrive(); },              false },
+  { "InitKeyboard",      [](){ Keyboard.begin(); },            false },
+  { "StartWebServer",    [](){ startWebServer(); },            false },
+  { "StopSerial",        [](){ Serial.end(); },                false },
+  { "StopWiFi",          [](){ WiFi.mode(WIFI_OFF); },         false },
+  { "StopKeyboard",      [](){ Keyboard.end(); },              false },
+  { "StopMouse",         [](){ AbsMouse.end(); },              false },
+  { "logs",              [](){ printdmesg( serialprintln ); }, false },
   //{"StopUSB", [](){ } },
   //{"StopWebServer", [](){  } },
   //{"SetWiFiMode", [](){  } },
@@ -317,56 +235,7 @@ duckCommand DuckyCommands[] =
 };
 
 
-// SpaceHuhn's legacy Ducky Key commands
-duckCommand KeyCommands[] =
-{
-  {"ENTER",       [](){ keyboard::pressKey(KEY_ENTER); } },
-  {"MENU",        [](){ keyboard::pressKey(KEY_PROPS); } },
-  {"APP",         [](){ keyboard::pressKey(KEY_PROPS); } },
-
-  {"DELETE",      [](){ keyboard::pressKey(KEY_Delete); } },
-  {"BACKSPACE",   [](){ keyboard::pressKey(KEY_BCKSPACE); } },
-  {"HOME",        [](){ keyboard::pressKey(KEY_Home); } },
-  {"INSERT",      [](){ keyboard::pressKey(KEY_INSRT); } },
-  {"PAGEUP",      [](){ keyboard::pressKey(KEY_PAGEUP); } },
-  {"PAGEDOWN",    [](){ keyboard::pressKey(KEY_PAGEDOWN); } },
-  {"UPARROW",     [](){ keyboard::pressKey(KEY_UP); } },
-  {"UP",          [](){ keyboard::pressKey(KEY_UP); } },
-  {"DOWNARROW",   [](){ keyboard::pressKey(KEY_DOWN); } },
-  {"DOWN",        [](){ keyboard::pressKey(KEY_DOWN); } },
-  {"LEFTARROW",   [](){ keyboard::pressKey(KEY_LEFT); } },
-  {"LEFT",        [](){ keyboard::pressKey(KEY_LEFT); } },
-  {"RIGHTARROW",  [](){ keyboard::pressKey(KEY_RIGHT); } },
-  {"RIGHT",       [](){ keyboard::pressKey(KEY_RIGHT); } },
-  {"TAB",         [](){ keyboard::pressKey(KEY_TABULATION); } },
-  {"END",         [](){ keyboard::pressKey(KEY_End); } },
-  {"ESC",         [](){ keyboard::pressKey(KEY_ESCAPE); } },
-  {"ESCAPE",      [](){ keyboard::pressKey(KEY_ESCAPE); } },
-  {"F1",          [](){ keyboard::pressKey(KEY_F_1); } },
-  {"F2",          [](){ keyboard::pressKey(KEY_F_2); } },
-  {"F3",          [](){ keyboard::pressKey(KEY_F_3); } },
-  {"F4",          [](){ keyboard::pressKey(KEY_F_4); } },
-  {"F5",          [](){ keyboard::pressKey(KEY_F_5); } },
-  {"F6",          [](){ keyboard::pressKey(KEY_F_6); } },
-  {"F7",          [](){ keyboard::pressKey(KEY_F_7); } },
-  {"F8",          [](){ keyboard::pressKey(KEY_F_8); } },
-  {"F9",          [](){ keyboard::pressKey(KEY_F_9); } },
-  {"F10",         [](){ keyboard::pressKey(KEY_F_10); } },
-  {"F11",         [](){ keyboard::pressKey(KEY_F_11); } },
-  {"F12",         [](){ keyboard::pressKey(KEY_F_12); } },
-  {"SPACE",       [](){ keyboard::pressKey(KEY_SPACE); } },
-  {"PAUSE",       [](){ keyboard::pressKey(KEY_PAUSE); } },
-  {"CAPSLOCK",    [](){ keyboard::pressKey(KEY_CAPSLOCK); } },
-  {"NUMLOCK",     [](){ keyboard::pressKey(KEY_NUMLOCK); } },
-  {"PRINTSCREEN", [](){ keyboard::pressKey(KEY_SYSRQ); } },
-  {"SCROLLLOCK",  [](){ keyboard::pressKey(KEY_SCROLLLOCK); } },
-  // modifiers
-  {"CTRL",        [](){ keyboard::pressKey(KEY_MOD_LCTRL); } },
-  {"CONTROL",     [](){ keyboard::pressKey(KEY_MOD_LCTRL); } },
-  {"SHIFT",       [](){ keyboard::pressKey(KEY_MOD_LSHIFT); } },
-  {"ALT",         [](){ keyboard::pressKey(KEY_MOD_LALT); } },
-  {"WINDOWS",     [](){ keyboard::pressKey(KEY_MOD_LMETA); } },
-};
+duckCommandSet WUDDuckCommandsSet = {WUDDuckCommands, sizeof( WUDDuckCommands ) / sizeof( duckCommand )};
 
 
 // run all payloads in a file, called from the webserver
@@ -389,38 +258,27 @@ void runpayload( fs::FS *fs, const char* payload)
 void setup()
 {
   //USB.onEvent(usbEventCallback);
-
-  USB.productName("WUD Quack USB Host");
-  USB.manufacturerName("INGSOC");
-  USB.serialNumber("0xDEADB33F");
   //Keyboard.onEvent(usbEventCallback);
   //HID.onEvent(usbEventCallback);
   WiFi.onEvent(WiFiEventCallback);
   // attach loggers to USB items, messages are deferred for later viewing with ducky "logs" command
-  #ifdef HAS_PENDRIVE
-    USBPenDriveLogger = logsprintf;
-  #endif
+  USBPenDriveLogger = logsprintf;
 
   WebServerLogger = logmsg;
   MouseLogger = logmsg;
   WebServerLogsPrinter = printdmesg; // web server can deliver logs
 
   // attach custom ducky commands to the payload runner
-  duckparser::setCommands( DuckyCommands, sizeof( DuckyCommands ) / sizeof( duckCommand ) );
-  duckparser::setKeys( KeyCommands, sizeof( KeyCommands ) / sizeof( duckCommand ) );
+  duckparser::init(&WUDDuckCommandsSet);
 
   // use custom ducky commands to run this skech :-)
   duckparser::parse( "SerialBegin" );
   duckparser::parse( "InitKeyboard" );
   duckparser::parse( "InitMouse" );
-  #ifdef HAS_PENDRIVE
-    duckparser::parse( "InitPenDrive" );
-  #endif
+  duckparser::parse( "InitPenDrive" );
   duckparser::parse( "StartUSB" );
   duckparser::parse( "InitSPIFFS" );
-  #ifdef HAS_PENDRIVE
-    vTaskDelay(5000); // let the USB tasks finish their shift before doing critical detection stuff
-  #endif
+  vTaskDelay(5000); // let the USB tasks finish their shift before doing critical detection stuff
   duckparser::parse( "InitWiFi" ); // why the fuck does it fail on first connect ???
   duckparser::parse( "StartWebServer" );
 }
@@ -428,23 +286,16 @@ void setup()
 
 void loop()
 {
-  // process webserver commands
-  if( webserver_begun ) server.handleClient();
-  // process serial commands
-  if( serial_begun && Serial.available() )
+  if( webserver_begun ) server.handleClient(); // process webserver commands
+  if( serial_begun && Serial.available() )     // process serial commands
   {
     String line = "";
     while( Serial.available() && line.length()<MAX_SERIAL_INPUT ) line += (char)Serial.read();
     line.trim();
-    if( line == "help" ) {
-      Serial.println("Additional ESP32-WUD ducky commands:");
-      for( int i=0;i<duckparser::commands_count;i++ ) {
-        Serial.printf("  - %s\n", duckparser::commands[i].name );
-      }
-      return;
-    }
-    //log_d("Will handle payload: %s", line.c_str() );
-    duckparser::parse( line );
+    int repeats = duckparser::getRepeats();
+    do {
+      duckparser::parse( line );
+    } while( --repeats > 0 );
   }
   vTaskDelay(10);
 }

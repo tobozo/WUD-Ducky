@@ -63,6 +63,41 @@ With the latests changes, it's not necessary to use the magnet when flashing as 
  - `USB CDC On Boot` : `enabled`
  - `Upload Mode` : `Internal USB`
 
+# Customizing:
+
+The `boards` folder of this project has two files:
+  - `plaform.local.txt` snippet for the board profile, same as esp32-dev but bound to a different pins_arduino.h and has USB_CDC_ON_BOOT enabled by default
+  - `variants/esp32s2_wud/pins_arduino.h` uses the default pinout for esp32-s2 but is editable to customize USB vid/pid, etc
+
+Both need each other, so just copy the contents of the `boards` folder where your `board.txt` is.
+
+```log
+usb 2-6.3: new full-speed USB device number 33 using ehci-pci
+usb 2-6.3: New USB device found, idVendor=cafe, idProduct=deca, bcdDevice= 1.00
+usb 2-6.3: New USB device strings: Mfr=1, Product=2, SerialNumber=3
+usb 2-6.3: Product: WUD-Nutquacker
+usb 2-6.3: Manufacturer: IGNSOC
+usb 2-6.3: SerialNumber: 0xDEADB33F
+usb-storage 2-6.3:1.0: USB Mass Storage device detected
+scsi host20: usb-storage 2-6.3:1.0
+input: IGNSOC WUD-Nutquacker Mouse as /devices/pci0000:00/0000:00:1d.7/usb2/2-6/2-6.3/2-6.3:1.1/0003:CAFE:DECA.0052/input/input171
+input: IGNSOC WUD-Nutquacker Keyboard as /devices/pci0000:00/0000:00:1d.7/usb2/2-6/2-6.3/2-6.3:1.1/0003:CAFE:DECA.0052/input/input172
+hid-generic 0003:CAFE:DECA.0052: input,hidraw2: USB HID v1.11 Mouse [IGNSOC WUD-Nutquacker] on usb-0000:00:1d.7-6.3/input1
+cdc_acm 2-6.3:1.2: ttyACM1: USB ACM device
+scsi 20:0:0:0: Direct-Access     Pendrive TheQuacken       0x2a PQ: 0 ANSI: 2
+sd 20:0:0:0: Attached scsi generic sg4 type 0
+sd 20:0:0:0: [sdc] 15564800 512-byte logical blocks: (7.97 GB/7.42 GiB)
+sd 20:0:0:0: [sdc] Write Protect is off
+sd 20:0:0:0: [sdc] Mode Sense: 03 00 00 00
+sd 20:0:0:0: [sdc] No Caching mode page found
+sd 20:0:0:0: [sdc] Assuming drive cache: write through
+ sdc: sdc1
+sd 20:0:0:0: [sdc] Attached SCSI removable disk
+```
+
+
+
+
 
 
 # WUD w00t?
@@ -93,13 +128,17 @@ See the [wiki page](https://wiki.aprbrother.com/en/wud.html) for more info.
  - Improved web UI
  - Add RNDIS/CDC-ECM (network interface)
  - More lambda ducky commands (e.g. read exfiltrated data from USBSerial)
+ - OS Fingerprinting
+ - LED communication (for optical data exfiltration)
 
 
 ## Credits:
 
-Special thanks to @chegewara for helping me with this project and maintaining the awesome ESPTinyUSB library.
-
+ - @chegewara for helping me starting with this project and maintaining the awesome ESPTinyUSB library.
+ - @SpaceHuhn for letting my copy parts of the WiFiDuck parser.
+ - @whid-injector for providing inspiration.
+ - https://github.com/spacehuhn/wifi_ducky
  - https://github.com/chegewara/EspTinyUSB
  - https://github.com/whid-injector/WHID
- - https://github.com/spacehuhn/wifi_ducky
+
 

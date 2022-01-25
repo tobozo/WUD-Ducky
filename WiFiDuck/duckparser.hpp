@@ -10,32 +10,30 @@
 #include "parser.h" // word_list and word_node structs
 
 
-typedef void (*duckPayloadCharCb)(char c, uint32_t wait);
-typedef void (*duckPayloadChunkCb)(char *c);
 typedef void (*duckCommandCb)();
-
 
 struct duckCommand
 {
   const char* name;
   duckCommandCb cb;
+  bool needs_args;
 };
 
+struct duckCommandSet
+{
+  duckCommand *commands;
+  size_t count;
+};
 
 
 namespace duckparser
 {
-    void parse(const char* str, size_t len);
-    void parse( String str );
-    int getRepeats();
-    unsigned int getDelayTime();
+  void init( duckCommandSet* user_commands = nullptr );
 
-    void setCommands(duckCommand* _commands, size_t count);
-    duckCommand* commands;
-    size_t commands_count;
+  void parse(const char* str, size_t len); // legacy parser
+  void parse( String str ); // wrapper for legacy parser except it adds a '\n' at the end of the string
 
-    duckCommand* keys;
-    size_t keys_count;
-
+  int getRepeats();
+  unsigned int getDelayTime();
 
 };

@@ -8,3 +8,9 @@
 #define CASE_SENSITIVE false
 
 #define MAX_SERIAL_INPUT 4096
+
+// Config SSID and password for access point
+const char* SSID        = "WUD-01";
+const char* PASSWORD    = "12345678";
+
+#define BUILTIN_LED_PIN 21

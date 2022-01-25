@@ -9,361 +9,514 @@
 
 #include "keyboard.cpp"
 #include "mouse.cpp"
+#include "led_controls.cpp"
+
+#include "../xbm/alien.xbm.h"
+
+// some easter egg to test the mouse in absolute positioning mode
+xbmImage_t Alien_128x64 =
+{
+  alien_width,
+  alien_height,
+  alien_bytes,
+  alien_bytes_per_row,
+  Alien_128x64_bits
+};
+
+
 
 
 namespace duckparser
 {
-    // ====== PRIVATE ===== //
-    bool inString  = false;
-    bool inComment = false;
+  // PRIVATE (not really since 'using namespace duckparser;' will expose those)
 
-    int defaultDelay = 5;
-    int repeatNum    = 0;
+  bool inited = false;
 
-    unsigned long interpretTime  = 0;
-    unsigned long sleepStartTime = 0;
-    unsigned long sleepTime      = 0;
+  // some local values to walk through lines/words nodes
+  bool ignore_delay;
+  word_list* wordlist;
+  word_node* cmd;
+  word_node* wordnode;
+  line_list* linelist;
+  line_node* linenode;
 
-    void type(const char* str, size_t len)
-    {
-        keyboard::write(str, len);
+  const char* line_str;
+  size_t line_str_len;
+
+  char last_char;
+  bool line_end;
+
+  // Keys and Command sets
+  duckCommandSet *keys = nullptr;            // Legacy WiFiDuck named keys
+  duckCommandSet *legacy_commands = nullptr; // Legacy WiFiDuck commands
+  duckCommandSet *custom_commands = nullptr; // WUD commands
+
+  // state flags
+  bool inString  = false;
+  bool inComment = false;
+
+  int defaultDelay = 5;
+  int repeatNum    = 0;
+
+  unsigned long interpretTime  = 0;
+  unsigned long sleepStartTime = 0;
+  unsigned long sleepTime      = 0;
+
+  // typewriter
+  void type(const char* str, size_t len)
+  {
+    keyboard::write(str, len);
+  }
+
+  // shortcut / key presser
+  void press(const char* str, size_t len)
+  {
+    if (len == 1) { // single character
+      keyboard::press(str);
+      return;
     }
+    duckCommand* match_key = nullptr;
+    for( int i=0;i<keys->count;i++) {
+      if (compare(str, len, keys->commands[i].name, CASE_SENSITIVE)) {
+        match_key = &keys->commands[i];
+        break;
+      }
+    }
+    if( match_key ) match_key->cb();
+    else keyboard::press(str); // Utf8 character
+  }
 
-    void press(const char* str, size_t len)
-    {
-        // character
-        if (len == 1) {
-          keyboard::press(str);
-          return;
+  // keyboard releaser
+  void release()
+  {
+    keyboard::release();
+  }
+
+  // input parser
+  unsigned int toInt(const char* str, size_t len)
+  {
+    if (!str || (len == 0)) return 0;
+    unsigned int val = 0;
+    if ((len > 2) && (str[0] == '0') && (str[1] == 'x')) { // HEX
+      for (size_t i = 2; i < len; ++i) {
+        uint8_t b = tolower(str[i]);
+        if ((b >= '0') && (b <= '9')) b = b - '0';
+        else if ((b >= 'a') && (b <= 'f')) b = b - 'a' + 10;
+        //else if ((b >= 'A') && (b <= 'F')) b = b - 'A' + 10;
+        val = (val << 4) | (b & 0xF);
+      }
+    } else { // DECIMAL
+      for (size_t i = 0; i < len; ++i) {
+        if ((str[i] >= '0') && (str[i] <= '9')) {
+          val = val * 10 + (str[i] - '0');
         }
-        int keyCommand = -1;
-        for( int i=0;i<keys_count;i++) {
-          if (compare(str, len, keys[i].name, CASE_SENSITIVE)) {
-            keyCommand = i;
-            break;
+      }
+    }
+    return val;
+  }
+
+  // sandman
+  void sleep(unsigned long time)
+  {
+    unsigned long offset = millis() - interpretTime;
+    if (time > offset) {
+      sleepStartTime = millis();
+      sleepTime      = time - offset;
+      delay(sleepTime);
+    }
+  }
+
+
+
+  // Legacy Commands (internals)
+
+  void setDelay()
+  {
+    sleep(toInt(line_str, line_str_len));
+    ignore_delay = true;
+  }
+
+  void setDefaultDelay()
+  {
+    defaultDelay = toInt(line_str, line_str_len);
+    ignore_delay = true;
+  }
+
+  void setRepeat()
+  {
+    repeatNum    = toInt(line_str, line_str_len) + 1;
+    Serial.printf("Setting repeat to %d\n", repeatNum );
+    ignore_delay = true;
+  }
+
+  void setLed()
+  {
+    int c[3];
+    for (uint8_t i = 0; i<3; ++i) {
+      if (wordnode) {
+        c[i] = toInt(wordnode->str, wordnode->len);
+        wordnode    = wordnode->next;
+      } else c[i] = 0;
+    }
+    if( c[1] + c[2] == 0 ) ledControl::set( c[0]==0 ? false:true ); // no delays provided, just a state change
+    else                   ledControl::blink( c[1], c[2] );
+  }
+
+  void setKeycode()
+  {
+    KeyReport k;
+    k.modifiers = (uint8_t)toInt(wordnode->str, wordnode->len);
+    k.reserved  = 0;
+    wordnode    = wordnode->next;
+    for (uint8_t i = 0; i<6; ++i) {
+      if (wordnode) {
+        k.keys[i] = (uint8_t)toInt(wordnode->str, wordnode->len);
+        wordnode  = wordnode->next;
+      } else k.keys[i] = 0;
+    }
+    keyboard::send(&k);
+    keyboard::release();
+  }
+
+  // set keyboard layout according to the ducky input
+  void setLocale()
+  {
+    if (compare(wordnode->str, wordnode->len, "US", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_us);
+    } else if (compare(wordnode->str, wordnode->len, "DE", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_de);
+    } else if (compare(wordnode->str, wordnode->len, "RU", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_ru);
+    } else if (compare(wordnode->str, wordnode->len, "GB", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_gb);
+    } else if (compare(wordnode->str, wordnode->len, "ES", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_es);
+    } else if (compare(wordnode->str, wordnode->len, "FR", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_fr);
+    } else if (compare(wordnode->str, wordnode->len, "DK", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_dk);
+    } else if (compare(wordnode->str, wordnode->len, "BE", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_be);
+    } else if (compare(wordnode->str, wordnode->len, "PT", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_pt);
+    } else if (compare(wordnode->str, wordnode->len, "IT", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_it);
+    } else if (compare(wordnode->str, wordnode->len, "SK", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_sk);
+    } else if (compare(wordnode->str, wordnode->len, "CZ", CASE_SENSITIVE)) {
+      keyboard::setLocale(&locale_cz);
+    }
+    ignore_delay = true;
+  }
+
+  // Mouse commands (internals)
+
+  void MouseMoveUp() // relative
+  {
+    int mousemoveamt = toInt(line_str, line_str_len);
+    MouseGFX->moveYrel( -mousemoveamt );
+  }
+
+  void MouseMoveDown() // relative
+  {
+    int mousemoveamt = toInt(line_str, line_str_len);
+    MouseGFX->moveYrel( mousemoveamt  );
+  }
+
+  void MouseMoveLeft() // relative
+  {
+    int mousemoveamt = toInt(line_str, line_str_len);
+    MouseGFX->moveXrel( -mousemoveamt );
+  }
+
+  void MouseMoveRight() // relative
+  {
+    int mousemoveamt = toInt(line_str, line_str_len);
+    MouseGFX->moveXrel( mousemoveamt );
+  }
+
+  void MouseClickRelease()
+  {
+    MouseGFX->moveXYrel( 0, 0, 0 );
+  }
+
+  void MouseClickRIGHT()
+  {
+    MouseGFX->moveXYrel( 0, 0, MOUSE_RIGHT_BTN );
+  }
+
+  void MouseClickLEFT()
+  {
+    MouseGFX->moveXYrel( 0, 0, MOUSE_LEFT_BTN );
+  }
+
+  void MouseClickMIDDLE()
+  {
+    MouseGFX->moveXYrel( 0, 0, MOUSE_MIDDLE_BTN );
+  }
+
+  void MouseDoubleClickLEFT()
+  {
+    MouseGFX->sendDoubleClick( MOUSE_LEFT_BTN, 100, 100 );
+  }
+
+  void MouseMoveToCoords() // absolute
+  {
+    word_node* w = cmd->next;
+    int coords[2];
+    for (uint8_t i = 0; i<2; ++i) {
+      if (w) {
+        coords[i] = toInt(w->str, w->len);
+        w    = w->next;
+      } else {
+        coords[i] = 0;
+      }
+    }
+    MouseGFX->moveXYabs( coords[0], coords[1], MouseGFX->getButtons() );
+  }
+
+  void SetDisplay()
+  {
+    word_node* w = cmd->next;
+    int coords[2];
+    for (uint8_t i = 0; i<2; ++i) {
+      if (w) {
+        coords[i] = toInt(w->str, w->len);
+        w    = w->next;
+      } else {
+        coords[i] = 0;
+      }
+    }
+    MouseGFX->setDisplay( coords[0], coords[1] );
+  }
+
+
+  void DrawSpaceInvaders() // easter egg omg!
+  {
+    MouseGFX->drawXbm( &Alien_128x64, 900, 500 );
+  }
+
+
+  void setRem()
+  {
+    inComment    = !line_end;
+    ignore_delay = true;
+  }
+
+  void setString()
+  {
+    if (inString) {
+      type(linenode->str, linenode->len);
+    } else {
+      type(line_str, line_str_len);
+    }
+    inString = !line_end;
+  }
+
+};
+
+
+
+
+namespace duckcommands
+{
+  // import duckparser exposing the internal commands
+  using namespace duckparser;
+
+  // attach SpaceHuhn's Legacy WiFiDuck Commands + Mouse implementations
+  duckCommand DuckyCommands[] =
+  {
+  //{ "Command",              callbackFunction,     needs_args },
+    { "REM",                  setRem,               false },
+    { "STRING",               setString,            false  },
+    { "LOCALE",               setLocale,            true  },
+    { "DELAY",                setDelay,             true  },
+    { "DEFAULTDELAY",         setDefaultDelay,      true  },
+    { "DEFAULT_DELAY",        setDefaultDelay,      true  },
+    { "REPEAT",               setRepeat,            true  },
+    { "REPLAY",               setRepeat,            true  },
+    { "LED",                  setLed,               true  },
+    { "KEYCODE",              setKeycode,           true  },
+    { "MouseMoveUp",          MouseMoveUp,          true  },
+    { "MouseMoveDown",        MouseMoveDown,        true  },
+    { "MouseMoveLeft",        MouseMoveLeft,        true  },
+    { "MouseMoveRight",       MouseMoveRight,       true  },
+    { "MouseClickRelease",    MouseClickRelease,    false },
+    { "MouseClickRIGHT",      MouseClickRIGHT,      false },
+    { "MouseClickLEFT",       MouseClickLEFT,       false },
+    { "MouseClickMIDDLE",     MouseClickMIDDLE,     false },
+    { "MouseDoubleClickLEFT", MouseDoubleClickLEFT, false },
+    { "MouseMoveToCoords",    MouseMoveToCoords,    true  },
+    { "SetDisplay",           SetDisplay,           true  },
+    { "DrawSpaceInvaders",    DrawSpaceInvaders,    false },
+  };
+
+  // SpaceHuhn's legacy WiFiDuck named keys
+  duckCommand KeyCommands[] =
+  {
+    {"ENTER",       [](){ keyboard::pressKey(KEY_ENTER); } },
+    {"MENU",        [](){ keyboard::pressKey(KEY_PROPS); } },
+    {"APP",         [](){ keyboard::pressKey(KEY_PROPS); } },
+    {"DELETE",      [](){ keyboard::pressKey(KEY_Delete); } },
+    {"BACKSPACE",   [](){ keyboard::pressKey(KEY_BCKSPACE); } },
+    {"HOME",        [](){ keyboard::pressKey(KEY_Home); } },
+    {"INSERT",      [](){ keyboard::pressKey(KEY_INSRT); } },
+    {"PAGEUP",      [](){ keyboard::pressKey(KEY_PAGEUP); } },
+    {"PAGEDOWN",    [](){ keyboard::pressKey(KEY_PAGEDOWN); } },
+    {"UPARROW",     [](){ keyboard::pressKey(KEY_UP); } },
+    {"UP",          [](){ keyboard::pressKey(KEY_UP); } },
+    {"DOWNARROW",   [](){ keyboard::pressKey(KEY_DOWN); } },
+    {"DOWN",        [](){ keyboard::pressKey(KEY_DOWN); } },
+    {"LEFTARROW",   [](){ keyboard::pressKey(KEY_LEFT); } },
+    {"LEFT",        [](){ keyboard::pressKey(KEY_LEFT); } },
+    {"RIGHTARROW",  [](){ keyboard::pressKey(KEY_RIGHT); } },
+    {"RIGHT",       [](){ keyboard::pressKey(KEY_RIGHT); } },
+    {"TAB",         [](){ keyboard::pressKey(KEY_TABULATION); } },
+    {"END",         [](){ keyboard::pressKey(KEY_End); } },
+    {"ESC",         [](){ keyboard::pressKey(KEY_ESCAPE); } },
+    {"ESCAPE",      [](){ keyboard::pressKey(KEY_ESCAPE); } },
+    {"F1",          [](){ keyboard::pressKey(KEY_F_1); } },
+    {"F2",          [](){ keyboard::pressKey(KEY_F_2); } },
+    {"F3",          [](){ keyboard::pressKey(KEY_F_3); } },
+    {"F4",          [](){ keyboard::pressKey(KEY_F_4); } },
+    {"F5",          [](){ keyboard::pressKey(KEY_F_5); } },
+    {"F6",          [](){ keyboard::pressKey(KEY_F_6); } },
+    {"F7",          [](){ keyboard::pressKey(KEY_F_7); } },
+    {"F8",          [](){ keyboard::pressKey(KEY_F_8); } },
+    {"F9",          [](){ keyboard::pressKey(KEY_F_9); } },
+    {"F10",         [](){ keyboard::pressKey(KEY_F_10); } },
+    {"F11",         [](){ keyboard::pressKey(KEY_F_11); } },
+    {"F12",         [](){ keyboard::pressKey(KEY_F_12); } },
+    {"SPACE",       [](){ keyboard::pressKey(KEY_SPACE); } },
+    {"PAUSE",       [](){ keyboard::pressKey(KEY_PAUSE); } },
+    {"CAPSLOCK",    [](){ keyboard::pressKey(KEY_CAPSLOCK); } },
+    {"NUMLOCK",     [](){ keyboard::pressKey(KEY_NUMLOCK); } },
+    {"PRINTSCREEN", [](){ keyboard::pressKey(KEY_SYSRQ); } },
+    {"SCROLLLOCK",  [](){ keyboard::pressKey(KEY_SCROLLLOCK); } },
+    // modifiers
+    {"CTRL",        [](){ keyboard::pressKey(KEY_MOD_LCTRL); } },
+    {"CONTROL",     [](){ keyboard::pressKey(KEY_MOD_LCTRL); } },
+    {"SHIFT",       [](){ keyboard::pressKey(KEY_MOD_LSHIFT); } },
+    {"ALT",         [](){ keyboard::pressKey(KEY_MOD_LALT); } },
+    {"WINDOWS",     [](){ keyboard::pressKey(KEY_MOD_LMETA); } },
+  };
+
+};
+
+
+
+
+namespace duckparser
+{
+  using namespace duckcommands;
+
+  // PUBLIC
+
+  void init( duckCommandSet* user_commands )
+  {
+    if( !inited ) {
+      legacy_commands = new duckCommandSet({ DuckyCommands, sizeof( DuckyCommands ) / sizeof( duckCommand ) });
+      keys            = new duckCommandSet({ KeyCommands,   sizeof( KeyCommands )   / sizeof( duckCommand ) });
+      ledControl::init();
+      inited = true;
+    }
+    if( user_commands != nullptr ) {
+      custom_commands = user_commands;
+    }
+  }
+
+
+  void parse( String str )
+  {
+    if( !str.endsWith("\n" ) ) str += "\n"; // append line end
+    parse( str.c_str(), str.length() );
+  }
+
+
+  void parse(const char* str, size_t len)
+  {
+    interpretTime = millis();
+
+    // Split str into a list of lines
+    linelist = parse_lines(str, len);
+
+    // Go through all lines
+    linenode = linelist->first;
+
+    while (linenode) {
+      ignore_delay = false; // Flag, no default delay after this command
+
+      wordlist  = linenode->words;
+      cmd = wordlist->first;
+      wordnode = cmd->next;
+
+      line_str = cmd->str + cmd->len + 1;
+      line_str_len  = linenode->len - cmd->len - 1;
+
+      last_char = linenode->str[linenode->len];
+      line_end  = last_char == '\r' || last_char == '\n';
+
+      duckCommand* match_cmd = nullptr;
+      bool command_had_args = (wordnode && wordnode->len > 0 && wordnode->str[0] !='\0');
+
+      // iterate in legacy commands
+      for( int i=0;i<legacy_commands->count;i++ ) {
+        if(compare(cmd->str, cmd->len, legacy_commands->commands[i].name, CASE_SENSITIVE) ) {
+          if( legacy_commands->commands[i].needs_args == command_had_args )
+            match_cmd = &legacy_commands->commands[i];
+        }
+      }
+      // iterate in custom commands of no match found
+      if( match_cmd == nullptr && custom_commands ) { // commands with or without args
+        for( int i=0;i<custom_commands->count;i++ ) {
+          if(compare(cmd->str, cmd->len, custom_commands->commands[i].name, CASE_SENSITIVE) ) {
+            if( custom_commands->commands[i].needs_args == command_had_args )
+              match_cmd = &custom_commands->commands[i];
           }
         }
-        if( keyCommand > -1 ) keys[keyCommand].cb();
-        else keyboard::press(str); // Utf8 character
-    }
-
-    void release()
-    {
-        keyboard::release();
-    }
-
-
-    unsigned int toInt(const char* str, size_t len)
-    {
-        if (!str || (len == 0)) return 0;
-
-        unsigned int val = 0;
-
-        // HEX
-        if ((len > 2) && (str[0] == '0') && (str[1] == 'x')) {
-            for (size_t i = 2; i < len; ++i) {
-                uint8_t b = str[i];
-
-                if ((b >= '0') && (b <= '9')) b = b - '0';
-                else if ((b >= 'a') && (b <= 'f')) b = b - 'a' + 10;
-                else if ((b >= 'A') && (b <= 'F')) b = b - 'A' + 10;
-
-                val = (val << 4) | (b & 0xF);
-            }
+      }
+      if( !inComment && !inString && match_cmd ) {
+        match_cmd->cb();
+      } else if (inComment || compare(cmd->str, cmd->len, "REM", CASE_SENSITIVE)) { // REM (= Comment -> do nothing)
+        setRem();
+      } else if (inString || compare(cmd->str, cmd->len, "STRING", CASE_SENSITIVE)) { // STRING (-> type each character)
+        setString();
+      } else { // Otherwise go through words and look for keys to press
+        wordnode = wordlist->first;
+        while (wordnode) {
+          press(wordnode->str, wordnode->len);
+          wordnode = wordnode->next;
         }
-        // DECIMAL
-        else {
-            for (size_t i = 0; i < len; ++i) {
-                if ((str[i] >= '0') && (str[i] <= '9')) {
-                    val = val * 10 + (str[i] - '0');
-                }
-            }
-        }
-
-        return val;
+        if (line_end) release();
+      }
+      linenode = linenode->next;
+      if (!inString && !inComment && !ignore_delay) sleep(defaultDelay);
+      if (line_end && (repeatNum > 0)) --repeatNum;
+      interpretTime = millis();
     }
 
-    void sleep(unsigned long time)
-    {
-        unsigned long offset = millis() - interpretTime;
+    line_list_destroy(linelist);
+  }
 
-        if (time > offset) {
-            sleepStartTime = millis();
-            sleepTime      = time - offset;
 
-            delay(sleepTime);
-        }
+  int getRepeats()
+  {
+    return repeatNum;
+  }
+
+
+  unsigned int getDelayTime()
+  {
+    unsigned long finishTime  = sleepStartTime + sleepTime;
+    unsigned long currentTime = millis();
+
+    if (currentTime > finishTime) {
+      return 0;
+    } else {
+      unsigned long remainingTime = finishTime - currentTime;
+      return (unsigned int)remainingTime;
     }
-
-    // ====== PUBLIC ===== //
-
-    void setKeys(duckCommand* _keys, size_t count)
-    {
-      keys = _keys;
-      keys_count = count;
-    }
+  }
 
 
-    void setCommands(duckCommand* _commands, size_t count)
-    {
-      commands = _commands;
-      commands_count = count;
-    }
-
-    void parse( String str )
-    {
-      if( !str.endsWith("\n" ) ) str += "\n"; // append line end
-      parse( str.c_str(), str.length() );
-    }
-
-    void parse(const char* str, size_t len)
-    {
-        interpretTime = millis();
-
-        // Split str into a list of lines
-        line_list* l = parse_lines(str, len);
-
-        // Go through all lines
-        line_node* n = l->first;
-
-        // Flag, no default delay after this command
-        bool ignore_delay;
-
-        while (n) {
-            ignore_delay = false;
-
-            word_list* wl  = n->words;
-            word_node* cmd = wl->first;
-
-            const char* line_str = cmd->str + cmd->len + 1;
-            size_t line_str_len  = n->len - cmd->len - 1;
-
-            char last_char = n->str[n->len];
-            bool line_end  = last_char == '\r' || last_char == '\n';
-
-
-            int custom_cmd = -1;
-
-            for( int i=0;i<commands_count;i++ ) {
-              if(compare(cmd->str, cmd->len, commands[i].name, CASE_SENSITIVE) ) {
-                custom_cmd = i;
-              }
-            }
-
-            if( !inComment && !inString && custom_cmd>-1 ) {
-              commands[custom_cmd].cb();
-            }
-
-            // REM (= Comment -> do nothing)
-            else if (inComment || compare(cmd->str, cmd->len, "REM", CASE_SENSITIVE)) {
-                inComment    = !line_end;
-                ignore_delay = true;
-            }
-
-
-            else if (compare(cmd->str, cmd->len, "MouseMoveUp", CASE_SENSITIVE)) {
-              int mousemoveamt = toInt(line_str, line_str_len);
-              MouseGFX->moveYrel( -mousemoveamt );
-            }
-            else if (compare(cmd->str, cmd->len, "MouseMoveDown", CASE_SENSITIVE)) {
-              int mousemoveamt = toInt(line_str, line_str_len);
-              MouseGFX->moveYrel( mousemoveamt  );
-            }
-            else if (compare(cmd->str, cmd->len, "MouseMoveLeft", CASE_SENSITIVE)) {
-              int mousemoveamt = toInt(line_str, line_str_len);
-              MouseGFX->moveXrel( -mousemoveamt );
-            }
-            else if (compare(cmd->str, cmd->len, "MouseMoveRight", CASE_SENSITIVE)) {
-              int mousemoveamt = toInt(line_str, line_str_len);
-              MouseGFX->moveXrel( mousemoveamt );
-            }
-            else if (compare(cmd->str, cmd->len, "MouseClickRelease", CASE_SENSITIVE)) {
-              MouseGFX->moveXYrel( 0, 0, 0 ); //vTaskDelay(25);}
-            }
-            else if (compare(cmd->str, cmd->len, "MouseClickRIGHT", CASE_SENSITIVE)) {
-              MouseGFX->moveXYrel( 0, 0, MOUSE_RIGHT_BTN );//vTaskDelay(25);
-            }
-            else if (compare(cmd->str, cmd->len, "MouseClickLEFT", CASE_SENSITIVE)) {
-              MouseGFX->moveXYrel( 0, 0, MOUSE_LEFT_BTN );//vTaskDelay(25);
-            }
-            else if (compare(cmd->str, cmd->len, "MouseClickMIDDLE", CASE_SENSITIVE)) {
-              MouseGFX->moveXYrel( 0, 0, MOUSE_MIDDLE_BTN );//vTaskDelay(25);
-            }
-            else if (compare(cmd->str, cmd->len, "MouseDoubleClickLEFT", CASE_SENSITIVE)) {
-              MouseGFX->sendDoubleClick( MOUSE_LEFT_BTN, 100, 100 );
-            }
-            else if (compare(cmd->str, cmd->len, "MouseMoveToCoords", CASE_SENSITIVE)) {
-              word_node* w = cmd->next;
-              int coords[2];
-              for (uint8_t i = 0; i<2; ++i) {
-                  if (w) {
-                      coords[i] = toInt(w->str, w->len);
-                      w    = w->next;
-                  } else {
-                      coords[i] = 0;
-                  }
-              }
-              MouseGFX->moveXYabs( coords[0], coords[1], MouseGFX->getButtons() );
-            }
-            else if (compare(cmd->str, cmd->len, "SetDisplay", CASE_SENSITIVE)) {
-              word_node* w = cmd->next;
-              int coords[2];
-              for (uint8_t i = 0; i<2; ++i) {
-                  if (w) {
-                      coords[i] = toInt(w->str, w->len);
-                      w    = w->next;
-                  } else {
-                      coords[i] = 0;
-                  }
-              }
-              MouseGFX->setDisplay( coords[0], coords[1] );
-
-            }
-
-
-            // LOCALE (-> change keyboard layout)
-            else if (compare(cmd->str, cmd->len, "LOCALE", CASE_SENSITIVE)) {
-                word_node* w = cmd->next;
-
-                if (compare(w->str, w->len, "US", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_us);
-                } else if (compare(w->str, w->len, "DE", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_de);
-                } else if (compare(w->str, w->len, "RU", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_ru);
-                } else if (compare(w->str, w->len, "GB", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_gb);
-                } else if (compare(w->str, w->len, "ES", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_es);
-                } else if (compare(w->str, w->len, "FR", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_fr);
-                } else if (compare(w->str, w->len, "DK", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_dk);
-                } else if (compare(w->str, w->len, "BE", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_be);
-                } else if (compare(w->str, w->len, "PT", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_pt);
-                } else if (compare(w->str, w->len, "IT", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_it);
-                } else if (compare(w->str, w->len, "SK", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_sk);
-                } else if (compare(w->str, w->len, "CZ", CASE_SENSITIVE)) {
-                    keyboard::setLocale(&locale_cz);
-                }
-
-                ignore_delay = true;
-            }
-
-            // DELAY (-> sleep for x ms)
-            else if (compare(cmd->str, cmd->len, "DELAY", CASE_SENSITIVE)) {
-                sleep(toInt(line_str, line_str_len));
-                ignore_delay = true;
-            }
-
-            // DEFAULTDELAY/DEFAULT_DELAY (set default delay per command)
-            else if (compare(cmd->str, cmd->len, "DEFAULTDELAY", CASE_SENSITIVE) || compare(cmd->str, cmd->len, "DEFAULT_DELAY", CASE_SENSITIVE)) {
-                defaultDelay = toInt(line_str, line_str_len);
-                ignore_delay = true;
-            }
-
-            // REPEAT (-> repeat last command n times)
-            else if (compare(cmd->str, cmd->len, "REPEAT", CASE_SENSITIVE) || compare(cmd->str, cmd->len, "REPLAY", CASE_SENSITIVE)) {
-                repeatNum    = toInt(line_str, line_str_len) + 1;
-                ignore_delay = true;
-            }
-
-            // STRING (-> type each character)
-            else if (inString || compare(cmd->str, cmd->len, "STRING", CASE_SENSITIVE)) {
-                if (inString) {
-                    type(n->str, n->len);
-                } else {
-                    type(line_str, line_str_len);
-                }
-
-                inString = !line_end;
-            }
-/*
-            // LED
-            else if (compare(cmd->str, cmd->len, "LED", CASE_SENSITIVE)) {
-                word_node* w = cmd->next;
-
-                int c[3];
-
-                for (uint8_t i = 0; i<3; ++i) {
-                    if (w) {
-                        c[i] = toInt(w->str, w->len);
-                        w    = w->next;
-                    } else {
-                        c[i] = 0;
-                    }
-                }
-
-                led::setColor(c[0], c[1], c[2]);
-            }
-*/
-            // KEYCODE
-            else if (compare(cmd->str, cmd->len, "KEYCODE", CASE_SENSITIVE)) {
-                word_node* w = cmd->next;
-                if (w) {
-                    KeyReport k;
-
-                    k.modifiers = (uint8_t)toInt(w->str, w->len);
-                    k.reserved  = 0;
-                    w           = w->next;
-
-                    for (uint8_t i = 0; i<6; ++i) {
-                        if (w) {
-                            k.keys[i] = (uint8_t)toInt(w->str, w->len);
-                            w         = w->next;
-                        } else {
-                            k.keys[i] = 0;
-                        }
-                    }
-
-                    keyboard::send(&k);
-                    keyboard::release();
-                }
-            }
-
-            // Otherwise go through words and look for keys to press
-            else {
-                word_node* w = wl->first;
-
-                while (w) {
-                    press(w->str, w->len);
-                    w = w->next;
-                }
-
-                if (line_end) release();
-            }
-
-            n = n->next;
-
-            if (!inString && !inComment && !ignore_delay) sleep(defaultDelay);
-
-            if (line_end && (repeatNum > 0)) --repeatNum;
-
-            interpretTime = millis();
-        }
-
-        line_list_destroy(l);
-    }
-
-    int getRepeats()
-    {
-        return repeatNum;
-    }
-
-    unsigned int getDelayTime()
-    {
-        unsigned long finishTime  = sleepStartTime + sleepTime;
-        unsigned long currentTime = millis();
-
-        if (currentTime > finishTime) {
-            return 0;
-        } else {
-            unsigned long remainingTime = finishTime - currentTime;
-            return (unsigned int)remainingTime;
-        }
-    }
-}
+};

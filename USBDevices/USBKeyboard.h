@@ -25,9 +25,11 @@
 \*/
 #pragma once
 
+#define HAS_KEYBOARD
+
 // this is just a copy of the official USBHIDKeyboard class with 'sendReport' moved from private to public
 
-
+#include "USBConfig.h"
 #include "Print.h"
 #include "USBHID.h"
 #if CONFIG_TINYUSB_HID_ENABLED

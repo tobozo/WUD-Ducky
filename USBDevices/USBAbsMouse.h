@@ -26,16 +26,16 @@
 
 #pragma once
 
+#define HAS_ABSMOUSE
+
 #define MOUSE_LEFT_BTN    0x01
 #define MOUSE_RIGHT_BTN   0x02
 #define MOUSE_MIDDLE_BTN  0x03
 #define MOUSE_BACK_BTN    0x04
 #define MOUSE_FORWARD_BTN 0x05
 
-
-#include "USB.h"
+#include "USBConfig.h"
 #include "USBHID.h"
-
 
 void (*MouseLogger)( String err );
 

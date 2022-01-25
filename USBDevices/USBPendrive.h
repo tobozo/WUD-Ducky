@@ -28,10 +28,11 @@
 
 #define HAS_PENDRIVE
 
-#include "USB.h"
+#include "USBConfig.h"
 #include "USBMSC.h"
 #include <SD.h>
 #include <SPIFFS.h>
+#include "../WiFiDuck/led_controls.hpp"
 
 // Config SD Card
 #define SD_MISO  37
@@ -207,10 +208,11 @@ static bool onStartStop(uint8_t power_condition, bool start, bool load_eject)
 
 static int32_t onWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize)
 {
-
+  ledControl::toggle();
   if( SD.writeRAW((uint8_t*)buffer, lba) ) {
     return bufsize;
   }
+  ledControl::blink(500, 500);
   USBPendriveLog("Write Error");
   return -1;
   //if( SD.writeRAW((uint8_t*)buffer, lba) ) log_v("MSC WRITE: lba: %u, offset: %u, bufsize: %u\n", lba, offset, bufsize);
@@ -219,9 +221,11 @@ static int32_t onWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t 
 
 static int32_t onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize)
 {
+  ledControl::toggle();
   //log_v("MSC READ: lba: %u, offset: %u, bufsize: %u\n", lba, offset, bufsize);
   if( SD.readRAW((uint8_t*)buffer, lba) ) return bufsize;
   USBPendriveLog("Read Error");
+  ledControl::blink(500, 500);
   return -1;
 }
 
@@ -240,9 +244,9 @@ bool initPenDrive()
     else duckyFS = &SD;
   }
 
-  MSC.vendorID("ESP32-S2");//max 8 chars
-  MSC.productID("SD card");//max 16 chars
-  MSC.productRevision("1.0");//max 4 chars
+  MSC.vendorID("Pendrive");//max 8 chars
+  MSC.productID("TheQuacken");//max 16 chars
+  MSC.productRevision("0x2a");//max 4 chars
   MSC.onStartStop(onStartStop);
   MSC.mediaPresent(true);
 
@@ -259,6 +263,8 @@ bool initPenDrive()
     if( USBPenDriveLogger ) USBPenDriveLogger("PenDrive+SD %s", pendrive_begun?"started successfully":"failed to start" );
   }
 
+  ledControl::set( pendrive_begun );
+
   return pendrive_begun;
 }
 
@@ -271,6 +277,7 @@ void deinitPenDrive()
   } else {
     USBPendriveLog("PenDrive not running, nothing to stop");
   }
+  ledControl::set( pendrive_begun );
 }
 
 

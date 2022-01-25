@@ -20,3 +20,10 @@
 #include "locales/locale_it.h"
 #include "locales/locale_sk.h"
 #include "locales/locale_cz.h"
+
+#include "locales/locale_si.h"
+#include "locales/locale_bg.h"
+#include "locales/locale_cafr.h"
+#include "locales/locale_chde.h"
+#include "locales/locale_chfr.h"
+#include "locales/locale_hu.h"

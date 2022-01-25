@@ -53,10 +53,24 @@ void handleKeySend();
 void handleRunPayload();
 void handleGetLogs();
 void handleChangeFS();
+void handleInfo();
 
 void WebServerLogMsg( String msg );
 void logprinter(String msg);
 String getContentType(String filename);
+
+
+String formatBytes(size_t bytes){
+  if (bytes < 1024){
+    return String(bytes)+" B";
+  } else if(bytes < (1024 * 1024)){
+    return String(bytes/1024.0)+" KB";
+  } else if(bytes < (1024 * 1024 * 1024)){
+    return String(bytes/1024.0/1024.0)+" MB";
+  } else {
+    return String(bytes/1024.0/1024.0/1024.0)+" GB";
+  }
+}
 
 
 void startWebServer()
@@ -71,6 +85,7 @@ void startWebServer()
   server.on("/delete", HTTP_POST, handleFileDelete);
   server.on("/key", HTTP_GET, handleKeySend);
   server.on("/runpayload", HTTP_GET, handleRunPayload);
+  server.on("/info", HTTP_GET, handleInfo );
   server.on("/upload", HTTP_POST, []() {
     server.sendHeader("Location", String("/"), true);
     server.send(302, "text/plain", "");
@@ -267,6 +282,34 @@ void handleRunPayload()
   server.send(200, "text/plain", path);
   runpayload( duckyFS, path.c_str() );
 }
+
+
+
+void handleInfo()
+{
+  float flashFreq = (float)ESP.getFlashChipSpeed() / 1000.0 / 1000.0;
+  FlashMode_t ideMode = ESP.getFlashChipMode();
+  String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><style>body { background: #1451AE; color: #ffffff;font-size: 14px;font-weight:bold;margin:0;padding:0.4em;}</style></head><body>";
+  output += "<h1>System Information</h1>";
+  output += "<h2>Software</h2>";
+  //output += "Firmware version " + firmwareVer + "<br>";
+  output += "<p>SDK version: " + String(ESP.getSdkVersion()) + "</p>";
+  output += "<p>Chip Id: " + String(ESP.getChipModel()) + "</p>";
+  output += "<h2>CPU</h2>";
+  output += "<p>CPU frequency: " + String(ESP.getCpuFreqMHz()) + "MHz</p>";
+  output += "<h2>Flash chip information</h2>";
+  output += "<p>Flash chip Id: " +  String(ESP.getFlashChipMode()) + "</p>";
+  output += "<p>Estimated Flash size: " + formatBytes(ESP.getFlashChipSize()) + "</p>";
+  output += "<p>Flash frequency: " + String(flashFreq) + " MHz</p>";
+  output += "<p>Flash write mode: " + String((ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN")) + "</p>";
+  output += "<h2>Sketch information</h2>";
+  output += "<p>Sketch hash: " + ESP.getSketchMD5() + "</p>";
+  output += "<p>Sketch size: " +  formatBytes(ESP.getSketchSize()) + "</p>";
+  output += "<p>Free space available: " +  formatBytes(ESP.getFreeSketchSpace()) + "</p>";
+  output += "</body></html>";
+  return server.send(200, "text/html", output);
+}
+
 
 
 void handleGetLogs()

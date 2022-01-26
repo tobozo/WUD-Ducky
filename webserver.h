@@ -347,7 +347,7 @@ void handleChangeFS()
 void WebServerLogMsg( String msg )
 {
   if( WebServerLogger ) WebServerLogger(msg);
-  else Serial.println( msg );
+  else USBSerial.println( msg );
 }
 
 

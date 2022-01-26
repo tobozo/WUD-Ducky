@@ -56,7 +56,7 @@ void deinitSD();
 void USBPendriveLog( String msg )
 {
   if( USBPenDriveLogger ) USBPenDriveLogger( "%s", msg.c_str() );
-  else Serial.println( msg.c_str() );
+  else USBSerial.println( msg.c_str() );
 }
 
 

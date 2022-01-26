@@ -43,7 +43,3 @@ void logsprintf( const char *fmt, ... )
 }
 
 
-void serialprintln(String msg)
-{
-  Serial.println( msg );
-}

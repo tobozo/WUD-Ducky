@@ -145,7 +145,6 @@ namespace duckparser
   void setRepeat()
   {
     repeatNum    = toInt(line_str, line_str_len) + 1;
-    Serial.printf("Setting repeat to %d\n", repeatNum );
     ignore_delay = true;
   }
 

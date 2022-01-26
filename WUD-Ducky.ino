@@ -42,29 +42,9 @@
   static bool serial_begun = false;
 #endif
 
-// Cursing after that Serial0/Serial/USBCDC unintuitive example from the official USB library:
-#if ARDUINO_USB_CDC_ON_BOOT
-  #define HWSerial Serial0
-  #define USBSerial Serial
-#else
-  #define HWSerial Serial
-  USBCDC USBSerial;
-#endif
-// While this covers about all in terms of exhibiting the different flavours of Serial
-// with or without USB, the mix of defines, objects and prefixes is more than confusing,
-// and the resulting behaviour is opaque.
-// 1) Both Serial USB and UART can be considered hardware.
-// 2) Which of both Serial interfaces is relevant for debugging? your guess :-)
-// 3) Why most USB examples from the official librayr use two Serial interfaces?
-// 4) Using defines for that is such a poor choice, C++ can do so much better than this.
-// 5) Enabling ARDUINO_USB_CDC_ON_BOOT starts USB before the setup() is reached
-
 
 // floating filesystem
 fs::FS* duckyFS = nullptr;
-
-
-
 
 
 static void WiFiEventCallback(WiFiEvent_t event)
@@ -115,27 +95,34 @@ void MouseDrawer( char* chunk )
 */
 
 
+
+void serialprintln(String msg)
+{
+  USBSerial.println( msg );
+}
+
+
 void SerialPrintHelp()
 {
   using namespace duckparser;
-  Serial.println("Legacy WiFiDuck named keys:");
+  USBSerial.println("Legacy WiFiDuck named keys:");
   for( int i=0;i<keys->count;i++ ) {
-    if( i%8==0 ) Serial.println();
-    Serial.printf(" %-12s", keys->commands[i].name );
+    if( i%8==0 ) USBSerial.println();
+    USBSerial.printf(" %-12s", keys->commands[i].name );
   }
-  Serial.println("\n");
-  Serial.println("Legacy WiFiDuck commands:");
-  Serial.println("  - REM");
-  Serial.println("  - STRING");
+  USBSerial.println("\n");
+  USBSerial.println("Legacy WiFiDuck commands:");
+  USBSerial.println("  - REM");
+  USBSerial.println("  - STRING");
   for( int i=0;i<legacy_commands->count;i++ ) {
-    Serial.printf("  - %s\n", legacy_commands->commands[i].name );
+    USBSerial.printf("  - %s\n", legacy_commands->commands[i].name );
   }
-  Serial.println();
-  Serial.println("WUD Ducky commands:");
+  USBSerial.println();
+  USBSerial.println("WUD Ducky commands:");
   for( int i=0;i<custom_commands->count;i++ ) {
-    Serial.printf("  - %s\n", custom_commands->commands[i].name );
+    USBSerial.printf("  - %s\n", custom_commands->commands[i].name );
   }
-  Serial.println();
+  USBSerial.println();
   return;
 }
 
@@ -146,7 +133,9 @@ void SerialBegin()
     logmsg("Serial already started");
     return;
   }
-  Serial.begin(115200);
+  USBSerial.begin();
+  HWSerial.begin(115200);
+  HWSerial.setDebugOutput(true);
   serial_begun = true;
   //Serial.setDebugOutput(true);
 }
@@ -155,7 +144,7 @@ void SerialDebug()
 {
   static bool debug_enabled = false;
   debug_enabled = !debug_enabled;
-  Serial.setDebugOutput(debug_enabled); // doing this may cause instability, use only for debug and expect more bugs :-)
+  USBSerial.setDebugOutput(debug_enabled); // doing this may cause instability, use only for debug and expect more bugs :-)
   logsprintf("setDebugOutput(%s)", debug_enabled?"true":"false");
 }
 
@@ -222,7 +211,7 @@ duckCommand WUDDuckCommands[] =
   { "InitPenDrive",      [](){ initPenDrive(); },              false },
   { "InitKeyboard",      [](){ Keyboard.begin(); },            false },
   { "StartWebServer",    [](){ startWebServer(); },            false },
-  { "StopSerial",        [](){ Serial.end(); },                false },
+  { "StopSerial",        [](){ USBSerial.end(); },                false },
   { "StopWiFi",          [](){ WiFi.mode(WIFI_OFF); },         false },
   { "StopKeyboard",      [](){ Keyboard.end(); },              false },
   { "StopMouse",         [](){ AbsMouse.end(); },              false },
@@ -287,10 +276,10 @@ void setup()
 void loop()
 {
   if( webserver_begun ) server.handleClient(); // process webserver commands
-  if( serial_begun && Serial.available() )     // process serial commands
+  if( serial_begun && USBSerial.available() )     // process serial commands
   {
     String line = "";
-    while( Serial.available() && line.length()<MAX_SERIAL_INPUT ) line += (char)Serial.read();
+    while( USBSerial.available() && line.length()<MAX_SERIAL_INPUT ) line += (char)USBSerial.read();
     line.trim();
     int repeats = duckparser::getRepeats();
     do {

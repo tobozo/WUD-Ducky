@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../status.h"
+
 // Cursing after that Serial0/Serial/USBCDC unintuitive example from the official USB library:
 #if ARDUINO_USB_CDC_ON_BOOT
   #define HWSerial Serial0
@@ -9,6 +11,7 @@
   #define HWSerial Serial
   USBCDC USBSerial;
 #endif
+
 // While this covers about all in terms of exhibiting the different flavours of Serial
 // with or without USB, the mix of defines, objects and prefixes is more than confusing,
 // and the resulting behaviour is opaque.

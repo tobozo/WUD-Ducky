@@ -81,8 +81,6 @@ typedef struct TU_ATTR_PACKED
 } abs_mouse_report_t;
 
 
-bool absmouse_begun = false;
-
 class HIDAbsMouse: public USBHIDDevice
 {
 

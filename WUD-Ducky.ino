@@ -36,13 +36,6 @@
 #include "WiFiDuck/duckparser.cpp" // SpaceHuhn's WiFiDuck implementation, with some mouse tweaks
 #include "webserver.h"
 
-#if ARDUINO_USB_CDC_ON_BOOT
-  static bool serial_begun = true;
-#else
-  static bool serial_begun = false;
-#endif
-
-
 // floating filesystem
 fs::FS* duckyFS = nullptr;
 
@@ -64,37 +57,6 @@ static void WiFiEventCallback(WiFiEvent_t event)
 }
 
 
-/*
-// some USB-dependant callbacks to attach
-
-void MouseDrawer( char* chunk )
-{
-  uint8_t mouse_btn_mask = (uint8_t)atoi( &chunk[1] );
-  int8_t  move8  = (int8_t)atoi( &chunk[1] );
-  int32_t move32 = (int32_t)atoi( &chunk[1] );
-  switch( chunk[0] ) {
-    case 'x': // absolute move X axis
-      MouseGFX->moveXabs( move32 );
-    break;
-    case 'y': // absolute move Y
-      MouseGFX->moveYabs( move32 );
-    break;
-    case 'X': // relative move X axis
-      MouseGFX->moveXrel( move8 );
-    break;
-    case 'Y': // relative move Y axis
-      MouseGFX->moveYrel( move8 );
-    break;
-    case 'C': // click/unclick
-      MouseGFX->moveXYrel( 0, 0, mouse_btn_mask );
-    break;
-    default: // ignore
-    break;
-  }
-}
-*/
-
-
 
 void serialprintln(String msg)
 {
@@ -102,9 +64,18 @@ void serialprintln(String msg)
 }
 
 
+void SystemInfo()
+{
+  String sysInfo;
+  getSystemInfo( sysInfo, false );
+  USBSerial.println( sysInfo );
+}
+
+
 void SerialPrintHelp()
 {
   using namespace duckparser;
+  if( !usbserial_begun ) return;
   USBSerial.println("Legacy WiFiDuck named keys:");
   for( int i=0;i<keys->count;i++ ) {
     if( i%8==0 ) USBSerial.println();
@@ -129,34 +100,135 @@ void SerialPrintHelp()
 
 void SerialBegin()
 {
-  if( serial_begun ) {
-    logmsg("Serial already started");
-    return;
+  if( ! hwserial_begun ) {
+    HWSerial.begin(115200);
+    HWSerial.setDebugOutput(false);
+    hwserial_begun = true;
   }
-  USBSerial.begin();
-  HWSerial.begin(115200);
-  HWSerial.setDebugOutput(true);
-  serial_begun = true;
-  //Serial.setDebugOutput(true);
+
+  if( !usbserial_begun ) {
+    USBSerial.begin();
+    USBSerial.setDebugOutput(false);
+    usbserial_begun = true;
+  }
 }
+
+
+void StopSerial()
+{
+  if( usbserial_begun ) {
+    USBSerial.end();
+    usbserial_begun = false;
+  }
+}
+
 
 void SerialDebug()
 {
   static bool debug_enabled = false;
+  if( !hwserial_begun ) return;
   debug_enabled = !debug_enabled;
-  USBSerial.setDebugOutput(debug_enabled); // doing this may cause instability, use only for debug and expect more bugs :-)
+  HWSerial.setDebugOutput(debug_enabled); // doing this may cause instability, use only with HWSerial connected and expect more bugs :-)
   logsprintf("setDebugOutput(%s)", debug_enabled?"true":"false");
 }
 
-void InitWiFi()
+void ResetPrefs()
 {
-  WiFi.mode(WIFI_AP);
-  WiFi.softAP(SSID, PASSWORD);
+  prefs::reset();
 }
+
+void LoadWiFiCreds()
+{
+  // retrieve SSID and Password for access point and station mode
+  prefs::get( "AP_SSID",      AP_SSID,      SSID_MAX_LEN,     DEFAULT_AP_SSID );
+  prefs::get( "AP_PASSWORD",  AP_PASSWORD,  PASSWORD_MAX_LEN, DEFAULT_AP_PASSWORD );
+  prefs::get( "STA_SSID",     STA_SSID,     SSID_MAX_LEN,     DEFAULT_STA_SSID );
+  prefs::get( "STA_PASSWORD", STA_PASSWORD, PASSWORD_MAX_LEN, DEFAULT_STA_PASSWORD );
+  //logmsg( String( "Prefs AP_SSID='" + String(AP_SSID) + "' AP_PASSWORD='" + String(AP_PASSWORD) + "' STA_SSID='" + String(STA_SSID) + "' STA_PASSWORD='" + String(STA_PASSWORD) + "'" ) );
+  //wificreds_loaded = true;
+}
+
+void SetSSID_AP()
+{
+  if( duckparser::wordnode->len > 0 ) {
+    prefs::set( "AP_SSID", duckparser::wordnode->str, duckparser::wordnode->len );
+  }
+}
+void SetSSID_STA()
+{
+  if( duckparser::wordnode->len > 0 ) {
+    prefs::set( "STA_SSID", duckparser::wordnode->str, duckparser::wordnode->len );
+  }
+}
+void SetPassword_AP()
+{
+  if( duckparser::wordnode->len > 0 ) {
+    prefs::set( "AP_PASSWORD", duckparser::wordnode->str, duckparser::wordnode->len );
+  }
+}
+void SetPassword_STA()
+{
+  if( duckparser::wordnode->len > 0 ) {
+    prefs::set( "STA_PASSWORD", duckparser::wordnode->str, duckparser::wordnode->len );
+  }
+}
+
+
+void InitWiFiAP()
+{
+  WiFi.mode( WIFI_MODE_APSTA );
+  WiFi.softAP( AP_SSID, AP_PASSWORD );
+  //logsprintf("Soft AP Started with SSID(%s) and PASSWORD(%s)", AP_SSID, AP_PASSWORD );
+  softap_begun = true;
+}
+
+
+void InitWiFiSTA()
+{
+  if( STA_SSID[0] != '\0' ) {
+    WiFi.begin( STA_SSID, STA_PASSWORD );
+  } else {
+    WiFi.begin();
+  }
+
+  // advertise the product name via mDNS
+  // so it becomes accessible via http://wud-nutquacker.local/
+
+  if(!MDNS.begin( USB_PRODUCT )) {
+    logmsg("Error starting mDNS");
+  }
+
+  // TODO: use WiFi events and a separate task
+  unsigned long timeout = 10000, now = millis();
+  while (WiFi.status() != WL_CONNECTED) {
+    if( millis()-now > timeout ) {
+      logmsg("WiFi Timed out");
+      return;
+    }
+    vTaskDelay(10);
+  }
+  wifista_begun = true;
+  logmsg( "WiFi STA IP: " + WiFi.localIP().toString() );
+}
+
+
+void StopWiFiSTA()
+{
+  WiFi.mode( WIFI_OFF );
+  if( softap_begun ) {
+    InitWiFiAP();
+  }
+}
+
+
 
 void InitSPIFFS()
 {
-  if( !SPIFFS.begin() ) logmsg("SPIFFS failed!");
+  if( !SPIFFS.begin() ) {
+    logmsg("SPIFFS failed!");
+    return;
+  }
+  spiffs_begun = true;
 }
 
 void InitSD()
@@ -174,24 +246,46 @@ void InitMouse()
 
 void StartUSB()
 {
-  #if (ARDUINO_USB_CDC_ON_BOOT|ARDUINO_USB_MSC_ON_BOOT|ARDUINO_USB_DFU_ON_BOOT)
-    // USB was already started by arduino core
+  if( usb_begun ) {
+    // USB was started by arduino core
     logmsg("USB already started");
-    while( !HID.ready() ) vTaskDelay(1);
-    return;
-  #else
+  } else {
     USB.VID( USB_VID );
     USB.PID( USB_PID );
     USB.productName( USB_PRODUCT );
     USB.manufacturerName( USB_MANUFACTURER );
     USB.serialNumber( USB_SERIAL );
-    if( !USB.begin() ) logmsg("USB Failed to start");
-    else { while( !HID.ready() ) vTaskDelay(1);  };
-  #endif
+    if( !USB.begin() ) {
+      logmsg("USB Failed to start");
+      return;
+    }
+    usb_begun = true;
+  }
+
+  unsigned long timeout = 10000, now = millis();
+  while( !HID.ready() ) {
+    if( millis()-now > timeout ) {
+      logmsg("HID Timed out");
+      return;
+    }
+    vTaskDelay(10);
+  }
+  hid_ready = true;
 }
 
+void InitKeyboard()
+{
+  if( keyboard_begun ) return;
+  Keyboard.begin();
+  keyboard_begun = true;
+}
 
-
+void StopKeyboard()
+{
+  if( !keyboard_begun ) return;
+  Keyboard.end();
+  keyboard_begun = false;
+}
 
 
 // WUD-Ducky system functionalities as Ducky Commands in a mix of real and lambda functions array.
@@ -199,21 +293,36 @@ void StartUSB()
 duckCommand WUDDuckCommands[] =
 {
   { "help",              SerialPrintHelp,                      false },
+  { "SysInfo",           SystemInfo,                           false },
   { "SerialBegin",       SerialBegin,                          false },
+  { "StopSerial",        StopSerial,                           false },
   { "SerialDebug",       SerialDebug,                          false },
   { "StopSD",            deinitSD,                             false },
   { "StopPenDrive",      deinitPenDrive,                       false },
   { "StartUSB",          StartUSB,                             false },
-  { "InitWiFi",          InitWiFi,                             false },
+//  { "InitWiFi",          InitWiFi,                             false },
+
+  { "LoadWiFiCreds",     LoadWiFiCreds,                        false }, // load AP/STA settings from preferences
+  { "InitWiFiAP",        InitWiFiAP,                           false },
+  { "InitWiFiSTA",       InitWiFiSTA,                          false },
+  { "StopWiFiSTA",       StopWiFiSTA,                          false },
+
+
+  { "ResetPrefs",        ResetPrefs,                           false },
+  { "SetSSID_AP",        SetSSID_AP,                           true  },
+  { "SetSSID_STA",       SetSSID_STA,                          true  },
+  { "SetPassword_AP",    SetPassword_AP,                       true  },
+  { "SetPassword_STA",   SetPassword_STA,                      true  },
+
+
   { "InitSPIFFS",        InitSPIFFS,                           false },
   { "InitSD",            InitSD,                               false },
   { "InitMouse",         InitMouse,                            false },
+  { "InitKeyboard",      InitKeyboard,                         false },
+  { "StopKeyboard",      StopKeyboard,                         false },
   { "InitPenDrive",      [](){ initPenDrive(); },              false },
-  { "InitKeyboard",      [](){ Keyboard.begin(); },            false },
   { "StartWebServer",    [](){ startWebServer(); },            false },
-  { "StopSerial",        [](){ USBSerial.end(); },                false },
   { "StopWiFi",          [](){ WiFi.mode(WIFI_OFF); },         false },
-  { "StopKeyboard",      [](){ Keyboard.end(); },              false },
   { "StopMouse",         [](){ AbsMouse.end(); },              false },
   { "logs",              [](){ printdmesg( serialprintln ); }, false },
   //{"StopUSB", [](){ } },
@@ -231,15 +340,24 @@ duckCommandSet WUDDuckCommandsSet = {WUDDuckCommands, sizeof( WUDDuckCommands ) 
 // TODO: bufferize that
 void runpayload( fs::FS *fs, const char* payload)
 {
-  if( !fs->exists( payload ) ) return;
+  if( !fs->exists( payload ) ) {
+    logsprintf("runpayload error: file %s does not exist", payload );
+    return;
+  }
   fs::File f = fs->open(payload, "r");
-  if( !f ) return;
+  if( !f ) {
+    logsprintf("runpayload error: file %s cannot be opened", payload );
+    return;
+  }
   String fileContent = "";
   while(f.available()) {
-    fileContent += f.read();
+    String lineContent = f.readStringUntil('\n');
+    duckparser::parse( lineContent );
+    //fileContent += (char)f.read();
   }
   f.close();
-  duckparser::parse(fileContent);
+  //duckparser::parse(fileContent);
+  logsprintf("payload from file %s run successfully", payload );
 }
 
 
@@ -256,6 +374,7 @@ void setup()
   WebServerLogger = logmsg;
   MouseLogger = logmsg;
   WebServerLogsPrinter = printdmesg; // web server can deliver logs
+  HIDKeySender = duckparser::parse;
 
   // attach custom ducky commands to the payload runner
   duckparser::init(&WUDDuckCommandsSet);
@@ -268,7 +387,9 @@ void setup()
   duckparser::parse( "StartUSB" );
   duckparser::parse( "InitSPIFFS" );
   vTaskDelay(5000); // let the USB tasks finish their shift before doing critical detection stuff
-  duckparser::parse( "InitWiFi" ); // why the fuck does it fail on first connect ???
+  duckparser::parse( "LoadWiFiCreds" );
+  duckparser::parse( "InitWiFiAP" );
+  duckparser::parse( "InitWiFiSTA" );
   duckparser::parse( "StartWebServer" );
 }
 
@@ -276,7 +397,7 @@ void setup()
 void loop()
 {
   if( webserver_begun ) server.handleClient(); // process webserver commands
-  if( serial_begun && USBSerial.available() )     // process serial commands
+  if( usbserial_begun && USBSerial.available() )     // process serial commands
   {
     String line = "";
     while( USBSerial.available() && line.length()<MAX_SERIAL_INPUT ) line += (char)USBSerial.read();

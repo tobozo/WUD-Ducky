@@ -10,6 +10,7 @@
 #include "keyboard.cpp"
 #include "mouse.cpp"
 #include "led_controls.cpp"
+#include "prefs.cpp"
 
 #include "../xbm/alien.xbm.h"
 

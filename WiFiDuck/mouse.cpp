@@ -204,3 +204,28 @@ void GfxMouse::drawXbm( xbmImage_t* xbmImage, int32_t startx, int32_t starty )
 //   void GfxMouse::fillRect(int x, int y, int width, int height ) { }
 
 
+// void GfxMouse::duck( char* chunk )
+// {
+//   uint8_t mouse_btn_mask = (uint8_t)atoi( &chunk[1] );
+//   int8_t  move8  = (int8_t)atoi( &chunk[1] );
+//   int32_t move32 = (int32_t)atoi( &chunk[1] );
+//   switch( chunk[0] ) {
+//     case 'x': // absolute move X axis
+//       MouseGFX->moveXabs( move32 );
+//     break;
+//     case 'y': // absolute move Y
+//       MouseGFX->moveYabs( move32 );
+//     break;
+//     case 'X': // relative move X axis
+//       MouseGFX->moveXrel( move8 );
+//     break;
+//     case 'Y': // relative move Y axis
+//       MouseGFX->moveYrel( move8 );
+//     break;
+//     case 'C': // click/unclick
+//       MouseGFX->moveXYrel( 0, 0, mouse_btn_mask );
+//     break;
+//     default: // ignore
+//     break;
+//   }
+// }

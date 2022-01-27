@@ -42,8 +42,9 @@
 
 //void (*USBPendriveLogger)( String err );
 void (*USBPenDriveLogger)( const char *fmt, ... );
-bool sd_begun = false;
-bool pendrive_begun = false;
+//bool sd_begun = false;
+//bool pendrive_begun = false;
+
 USBMSC MSC;
 extern fs::FS* duckyFS;
 
@@ -56,7 +57,9 @@ void deinitSD();
 void USBPendriveLog( String msg )
 {
   if( USBPenDriveLogger ) USBPenDriveLogger( "%s", msg.c_str() );
-  else USBSerial.println( msg.c_str() );
+  // else {
+  //   if( usbserial_begun ) USBSerial.println( msg.c_str() );
+  // }
 }
 
 

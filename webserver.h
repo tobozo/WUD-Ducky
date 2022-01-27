@@ -24,17 +24,21 @@
  *
 \*/
 
+#pragma once
+
+#include <ESPmDNS.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiAP.h>
 #include <WebServer.h>
 #include <SPIFFS.h>
 #include "index.h" // can be edited in place, or overriden with "index.html" file on SPIFFS
+#include "status.h"
 
 WebServer server(80);
 fs::File fsUploadFile;
 extern fs::FS* duckyFS;
-bool webserver_begun = false;
+
 static String logoutput;
 
 typedef void(*wslogprintercb)( String msg );
@@ -59,18 +63,6 @@ void WebServerLogMsg( String msg );
 void logprinter(String msg);
 String getContentType(String filename);
 
-
-String formatBytes(size_t bytes){
-  if (bytes < 1024){
-    return String(bytes)+" B";
-  } else if(bytes < (1024 * 1024)){
-    return String(bytes/1024.0)+" KB";
-  } else if(bytes < (1024 * 1024 * 1024)){
-    return String(bytes/1024.0/1024.0)+" MB";
-  } else {
-    return String(bytes/1024.0/1024.0/1024.0)+" GB";
-  }
-}
 
 
 void startWebServer()
@@ -113,7 +105,7 @@ void handleIndex()
       return;
     }
   }
-  WebServerLogMsg("Using built-in index, upload 'index.html' to override.");
+  //WebServerLogMsg("Using built-in index, upload 'index.html' to override.");
   server.send(200, contentType, index_html );
 }
 
@@ -151,7 +143,7 @@ bool handleFileRead(String path)
 {
   if (path.endsWith("/")) {
     handleIndex();
-    WebServerLogMsg("Serving file: "+path );
+    //WebServerLogMsg("Serving file: "+path );
     return true;
   } else {
     String contentType = getContentType(path);
@@ -250,7 +242,6 @@ void handleFileList()
   }
   output += "]}";
   server.send(200, "text/json", output);
-  //log_d("SENT JSON: %s\n", output.c_str() );
 }
 
 
@@ -259,11 +250,12 @@ void handleKeySend()
   if (server.args() == 0) {
     return server.send(500, "text/plain", "MISSING ARGS");
   }
-  String path = server.arg(0);
-  //log_d("Sending Keys: %s\\n", path.c_str() );
-  if( HIDKeySender) HIDKeySender( path+"\n");
-  server.send(200, "text/plain", path);
-  path = String();
+  String arg = server.arg(0);
+  if( HIDKeySender ) {
+    HIDKeySender( arg );
+  }
+  server.send(200, "text/plain", HIDKeySender ? arg : "No HID Attached" );
+  arg = String();
 }
 
 
@@ -287,27 +279,10 @@ void handleRunPayload()
 
 void handleInfo()
 {
-  float flashFreq = (float)ESP.getFlashChipSpeed() / 1000.0 / 1000.0;
-  FlashMode_t ideMode = ESP.getFlashChipMode();
-  String output = "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><style>body { background: #1451AE; color: #ffffff;font-size: 14px;font-weight:bold;margin:0;padding:0.4em;}</style></head><body>";
-  output += "<h1>System Information</h1>";
-  output += "<h2>Software</h2>";
-  //output += "Firmware version " + firmwareVer + "<br>";
-  output += "<p>SDK version: " + String(ESP.getSdkVersion()) + "</p>";
-  output += "<p>Chip Id: " + String(ESP.getChipModel()) + "</p>";
-  output += "<h2>CPU</h2>";
-  output += "<p>CPU frequency: " + String(ESP.getCpuFreqMHz()) + "MHz</p>";
-  output += "<h2>Flash chip information</h2>";
-  output += "<p>Flash chip Id: " +  String(ESP.getFlashChipMode()) + "</p>";
-  output += "<p>Estimated Flash size: " + formatBytes(ESP.getFlashChipSize()) + "</p>";
-  output += "<p>Flash frequency: " + String(flashFreq) + " MHz</p>";
-  output += "<p>Flash write mode: " + String((ideMode == FM_QIO ? "QIO" : ideMode == FM_QOUT ? "QOUT" : ideMode == FM_DIO ? "DIO" : ideMode == FM_DOUT ? "DOUT" : "UNKNOWN")) + "</p>";
-  output += "<h2>Sketch information</h2>";
-  output += "<p>Sketch hash: " + ESP.getSketchMD5() + "</p>";
-  output += "<p>Sketch size: " +  formatBytes(ESP.getSketchSize()) + "</p>";
-  output += "<p>Free space available: " +  formatBytes(ESP.getFreeSketchSpace()) + "</p>";
-  output += "</body></html>";
-  return server.send(200, "text/html", output);
+  String sysInfo;
+  getSystemInfo( sysInfo, true );
+  server.send(200, "text/html; charset=utf-8", sysInfo );
+  sysInfo = String();
 }
 
 
@@ -347,7 +322,7 @@ void handleChangeFS()
 void WebServerLogMsg( String msg )
 {
   if( WebServerLogger ) WebServerLogger(msg);
-  else USBSerial.println( msg );
+  //else USBSerial.println( msg );
 }
 
 

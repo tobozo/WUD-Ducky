@@ -25,6 +25,7 @@
 \*/
 #pragma once
 
+#include <WString.h>
 
 // minimalistic template implementation, with French attitude :o
 
@@ -34,33 +35,68 @@
 
 struct Poil
 {
-    const char* name;
-    const char* value;
+  const char* name;
+  const char* value;
 };
 
 
 struct Moustache
 {
-    String tpl;
 
-    void load( const char* _tpl )
-    {
-        tpl = String( _tpl );
-    }
+  String *_tpl = nullptr;
 
-    void parse( Poil *poil )
-    {
-        String tige  = String(MOUSTACHE_OPEN) + String(poil->name) + String(MOUSTACHE_CLOSE);
-        String bulbe = String( poil->value );
-        tpl.replace( tige, bulbe );
-    }
+  void set( String *tpl )
+  {
+    _tpl = tpl;
+  }
 
-    void parse( Poil* poils, size_t count )
-    {
-      if( !poils || count == 0 ) return; // can't shave a bald beard!
-      for( int i=0; i<count; i++ )
-          parse( &poils[i] );
+  void load( const char* tpl )
+  {
+    if( _tpl == nullptr ) {
+      // wut ?
+      return;
     }
+    *_tpl = String( tpl );
+  }
+
+  void parse( Poil *poil )
+  {
+    String tige  = String(MOUSTACHE_OPEN) + String(poil->name) + String(MOUSTACHE_CLOSE);
+    String bulbe = String( poil->value );
+    _tpl->replace( tige, bulbe );
+  }
+
+  void parse( Poil* poils, size_t count )
+  {
+    if( !poils || count == 0 ) return; // can't shave a bald beard!
+    for( int i=0; i<count; i++ )
+      parse( &poils[i] );
+  }
 };
+
+
+typedef void (*URITemplateParser)( String *output );
+
+const char* contentTypeHtml = "text/html; charset=utf-8";
+const char* contentTypeText = "text/plain; charset=utf-8";
+const char* contentTypeCss = "text/css; charset=utf-8";
+const char* contentTypeJs = "text/javascript; charset=utf-8";
+const char* contentTypeJson = "text/json";
+
+struct DynamicWebContent
+{
+  const char* basepath;
+  const char* content_type;
+  URITemplateParser content;
+};
+
+
+struct StaticWebContent
+{
+  const char* basepath;
+  const char* content_type;
+  const char* content;
+};
+
 
 

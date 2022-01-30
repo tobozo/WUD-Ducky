@@ -13,14 +13,14 @@ The payload syntax is heavily inspired by [whid-injector](https://github.com/whi
  - Mounted MicroSD card allows editing files from the OS, ~~and~~ or reading from the ESP
  - Starts WiFi in AP Mode
  - Runs a Webserver with the following endpoints:
-   - `/key` send string sequence to the keyboard
+   - `/quack` send script, key or string sequence to the keyboard
    - `/list` list available files on the SD Card
    - `/logs` call the last logs (and purges the log queue)
    - `/changefs` select the filesystem, SD or SPIFFS
    - `/runpayload` run ducky script from the selected filesystem
    - `/delete` delete a file
    - `/upload` upload a file
-   - `/*` serves the file from the selecte filesystem
+   - `/*` serves the file from the selected filesystem, makes them editable when SPIFFS is selected
  - Implements **[SpaceHuhn's WiFiDuck commands](https://github.com/SpacehuhnTech/WiFiDuck#scripting)**, but also comes with a few extras for mouse controls:
    - `help` : list all non standard ducky commands
    - `logs` : show last logs

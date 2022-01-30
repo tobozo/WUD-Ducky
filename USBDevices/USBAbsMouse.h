@@ -98,9 +98,9 @@ public:
 
   void begin(void)
   {
-    if( absmouse_begun ) return;
+    if( WUDStatus::absmouse_begun ) return;
     HID->begin();
-    absmouse_begun = true;
+    WUDStatus::absmouse_begun = true;
   }
 
   uint16_t _onGetDescriptor(uint8_t* buffer)
@@ -118,7 +118,7 @@ public:
   void end()
   {
     HID->end();
-    absmouse_begun = false;
+    WUDStatus::absmouse_begun = false;
   }
 
 private:

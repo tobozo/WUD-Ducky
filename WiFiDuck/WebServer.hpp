@@ -23,49 +23,41 @@
  * SOFTWARE.
  *
 \*/
+
 #pragma once
 
-#include "prefs.hpp"
+#include <ESPmDNS.h>
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <WiFiAP.h>
+#include <WebServer.h>
+#include <SPIFFS.h>
+//#include "WebUI.hpp" // IDE editable web files (can be overriden by spiffs but this is slower)
 
-#include <Preferences.h>
-#include "../logger.h"
 
-Preferences _prefs;
+typedef void(*wslogprintercb)( String msg );
 
-namespace prefs
+namespace WS
 {
+  WebServer server(80);
+  fs::File fsUploadFile;
+  static String logoutput;
+  void (*WebServerLogsPrinter)( wslogprintercb cb, bool clear_after );
+  wslogprintercb WebServerLogger;
+  void (*HIDKeySender)( String str );
+  void (*runpayload)( fs::FS *fs, const char* payload);
+  void startWebServer();
 
-  void reset()
-  {
-     _prefs.begin("WUD", false );
-     _prefs.clear();
-     _prefs.end();
-  }
-
-  void set( const char *name, const char *value, size_t len )
-  {
-    _prefs.begin("WUD", false );
-    char buf[len+2] = {0};
-    snprintf( buf, len+1, "%s", value );
-    if( _prefs.putString(name, buf) ) {
-      Logger::logsprintf("Pref saved: %s=%s", name, buf );
-    } else {
-      Logger::logsprintf("Pref saving failed! %s=%s", name, value );
-    }
-    _prefs.end();
-  }
-  void get( const char *name, char *dest, size_t max_len, const char *default_value )
-  {
-    _prefs.begin("WUD", true );
-    size_t len = _prefs.getString(name, dest, max_len );
-    if( len > 0 ) {
-      Logger::logsprintf("Pref thawed: %s='%s' (default='%s')", name, dest, default_value );
-    } else {
-      len = strlen(default_value)+1;
-      snprintf( dest, max_len, "%s", default_value );
-      Logger::logsprintf("Pref defaulted: %s='%s' (default='%s')", name, dest, default_value );
-    }
-    _prefs.end();
-  }
-
+   void WebServerLogMsg( String msg );
+   void logprinter(String msg);
+//   String getContentType(String filename);
+//   void handleFileUpload();
+//   bool contentFound(String path);
+//   void handleFileDelete();
+//   void handleFileList();
+//   void handleKeySend();
+//   void handleRunPayload();
+//   void handleInfo();
+//   void handleGetLogs();
+//   void handleChangeFS();
 };

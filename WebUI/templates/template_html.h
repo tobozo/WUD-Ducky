@@ -25,47 +25,30 @@
 \*/
 #pragma once
 
-#include "prefs.hpp"
+//  - Easy maintenance: ENABLE SYNTAX HIGHLIGHTING FOR HTML and ignore the C header/footer of this file
 
-#include <Preferences.h>
-#include "../logger.h"
+const char* template_html  = R"TemplateHTML(
 
-Preferences _prefs;
+<!doctype html public "🦆">
+<html>
+<head>
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <title>WUD-NutQuacker</title>
+  <link rel="stylesheet" type="text/css" href="/styles.css">
+</head>
+<body class="nutquacker">
+  <nav>
+    <button id="reload" class="action-button" onClick="history.go(0)">🗘</button>
+    <button id="info" class="action-button" onClick="top.location='/info'">🛈</button>
+    <button id="quack" class="action-button" onClick="top.location='/explorer'">🦆</button>
+  </nav>
+</body>
+</html>
 
-namespace prefs
-{
 
-  void reset()
-  {
-     _prefs.begin("WUD", false );
-     _prefs.clear();
-     _prefs.end();
-  }
-
-  void set( const char *name, const char *value, size_t len )
-  {
-    _prefs.begin("WUD", false );
-    char buf[len+2] = {0};
-    snprintf( buf, len+1, "%s", value );
-    if( _prefs.putString(name, buf) ) {
-      Logger::logsprintf("Pref saved: %s=%s", name, buf );
-    } else {
-      Logger::logsprintf("Pref saving failed! %s=%s", name, value );
-    }
-    _prefs.end();
-  }
-  void get( const char *name, char *dest, size_t max_len, const char *default_value )
-  {
-    _prefs.begin("WUD", true );
-    size_t len = _prefs.getString(name, dest, max_len );
-    if( len > 0 ) {
-      Logger::logsprintf("Pref thawed: %s='%s' (default='%s')", name, dest, default_value );
-    } else {
-      len = strlen(default_value)+1;
-      snprintf( dest, max_len, "%s", default_value );
-      Logger::logsprintf("Pref defaulted: %s='%s' (default='%s')", name, dest, default_value );
-    }
-    _prefs.end();
-  }
-
-};
+)TemplateHTML";

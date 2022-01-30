@@ -32,12 +32,9 @@
 \*/
 
 
-#include "config_check.h"
+#include "config_check.h" // fail early if the right board settings aren't selected
 #include "WiFiDuck/duckparser.cpp" // SpaceHuhn's WiFiDuck implementation, with some mouse tweaks
-#include "webserver.h"
-
-// floating filesystem
-fs::FS* duckyFS = nullptr;
+#include "WiFiDuck/WebServer.cpp"  // WUD Ducky Web UI
 
 
 static void WiFiEventCallback(WiFiEvent_t event)
@@ -53,7 +50,7 @@ static void WiFiEventCallback(WiFiEvent_t event)
       "SC_SCAN_DONE", "SC_FOUND_CHANNEL", "SC_GOT_SSID_PSWD", "SC_SEND_ACK_DONE",
       "PROV_INIT", "PROV_DEINIT", "PROV_START", "PROV_END", "PROV_CRED_RECV", "PROV_CRED_FAIL", "PROV_CRED_SUCCESS"
   };
-  logsprintf("[WiFi-event]: #%d (%s)", event, arduino_event_names[event]);
+  Logger::logsprintf("[WiFi-event]: #%d (%s)", event, arduino_event_names[event]);
 }
 
 
@@ -67,7 +64,7 @@ void serialprintln(String msg)
 void SystemInfo()
 {
   String sysInfo;
-  getSystemInfo( sysInfo, false );
+  WebUI::getSystemInfo( &sysInfo, false );
   USBSerial.println( sysInfo );
 }
 
@@ -75,7 +72,7 @@ void SystemInfo()
 void SerialPrintHelp()
 {
   using namespace duckparser;
-  if( !usbserial_begun ) return;
+  if( !WUDStatus::usbserial_begun ) return;
   USBSerial.println("Legacy WiFiDuck named keys:");
   for( int i=0;i<keys->count;i++ ) {
     if( i%8==0 ) USBSerial.println();
@@ -100,25 +97,25 @@ void SerialPrintHelp()
 
 void SerialBegin()
 {
-  if( ! hwserial_begun ) {
+  if( ! WUDStatus::hwserial_begun ) {
     HWSerial.begin(115200);
     HWSerial.setDebugOutput(false);
-    hwserial_begun = true;
+    WUDStatus::hwserial_begun = true;
   }
 
-  if( !usbserial_begun ) {
+  if( !WUDStatus::usbserial_begun ) {
     USBSerial.begin();
     USBSerial.setDebugOutput(false);
-    usbserial_begun = true;
+    WUDStatus::usbserial_begun = true;
   }
 }
 
 
 void StopSerial()
 {
-  if( usbserial_begun ) {
+  if( WUDStatus::usbserial_begun ) {
     USBSerial.end();
-    usbserial_begun = false;
+    WUDStatus::usbserial_begun = false;
   }
 }
 
@@ -126,10 +123,10 @@ void StopSerial()
 void SerialDebug()
 {
   static bool debug_enabled = false;
-  if( !hwserial_begun ) return;
+  if( !WUDStatus::hwserial_begun ) return;
   debug_enabled = !debug_enabled;
   HWSerial.setDebugOutput(debug_enabled); // doing this may cause instability, use only with HWSerial connected and expect more bugs :-)
-  logsprintf("setDebugOutput(%s)", debug_enabled?"true":"false");
+  Logger::logsprintf("setDebugOutput(%s)", debug_enabled?"true":"false");
 }
 
 void ResetPrefs()
@@ -178,8 +175,8 @@ void InitWiFiAP()
 {
   WiFi.mode( WIFI_MODE_APSTA );
   WiFi.softAP( AP_SSID, AP_PASSWORD );
-  //logsprintf("Soft AP Started with SSID(%s) and PASSWORD(%s)", AP_SSID, AP_PASSWORD );
-  softap_begun = true;
+  //Logger::logsprintf("Soft AP Started with SSID(%s) and PASSWORD(%s)", AP_SSID, AP_PASSWORD );
+  WUDStatus::softap_begun = true;
 }
 
 
@@ -195,27 +192,27 @@ void InitWiFiSTA()
   // so it becomes accessible via http://wud-nutquacker.local/
 
   if(!MDNS.begin( USB_PRODUCT )) {
-    logmsg("Error starting mDNS");
+    Logger::logmsg("Error starting mDNS");
   }
 
   // TODO: use WiFi events and a separate task
   unsigned long timeout = 10000, now = millis();
   while (WiFi.status() != WL_CONNECTED) {
     if( millis()-now > timeout ) {
-      logmsg("WiFi Timed out");
+      Logger::logmsg("WiFi Timed out");
       return;
     }
     vTaskDelay(10);
   }
-  wifista_begun = true;
-  logmsg( "WiFi STA IP: " + WiFi.localIP().toString() );
+  WUDStatus::wifista_begun = true;
+  Logger::logmsg( "WiFi STA IP: " + WiFi.localIP().toString() );
 }
 
 
 void StopWiFiSTA()
 {
   WiFi.mode( WIFI_OFF );
-  if( softap_begun ) {
+  if( WUDStatus::softap_begun ) {
     InitWiFiAP();
   }
 }
@@ -225,10 +222,10 @@ void StopWiFiSTA()
 void InitSPIFFS()
 {
   if( !SPIFFS.begin() ) {
-    logmsg("SPIFFS failed!");
+    Logger::logmsg("SPIFFS failed!");
     return;
   }
-  spiffs_begun = true;
+  WUDStatus::spiffs_begun = true;
 }
 
 void InitSD()
@@ -246,9 +243,9 @@ void InitMouse()
 
 void StartUSB()
 {
-  if( usb_begun ) {
+  if( WUDStatus::usb_begun ) {
     // USB was started by arduino core
-    logmsg("USB already started");
+    Logger::logmsg("USB already started");
   } else {
     USB.VID( USB_VID );
     USB.PID( USB_PID );
@@ -256,35 +253,35 @@ void StartUSB()
     USB.manufacturerName( USB_MANUFACTURER );
     USB.serialNumber( USB_SERIAL );
     if( !USB.begin() ) {
-      logmsg("USB Failed to start");
+      Logger::logmsg("USB Failed to start");
       return;
     }
-    usb_begun = true;
+    WUDStatus::usb_begun = true;
   }
 
   unsigned long timeout = 10000, now = millis();
   while( !HID.ready() ) {
     if( millis()-now > timeout ) {
-      logmsg("HID Timed out");
+      Logger::logmsg("HID Timed out");
       return;
     }
     vTaskDelay(10);
   }
-  hid_ready = true;
+  WUDStatus::hid_ready = true;
 }
 
 void InitKeyboard()
 {
-  if( keyboard_begun ) return;
+  if( WUDStatus::keyboard_begun ) return;
   Keyboard.begin();
-  keyboard_begun = true;
+  WUDStatus::keyboard_begun = true;
 }
 
 void StopKeyboard()
 {
-  if( !keyboard_begun ) return;
+  if( !WUDStatus::keyboard_begun ) return;
   Keyboard.end();
-  keyboard_begun = false;
+  WUDStatus::keyboard_begun = false;
 }
 
 
@@ -321,17 +318,16 @@ duckCommand WUDDuckCommands[] =
   { "InitKeyboard",      InitKeyboard,                         false },
   { "StopKeyboard",      StopKeyboard,                         false },
   { "InitPenDrive",      [](){ initPenDrive(); },              false },
-  { "StartWebServer",    [](){ startWebServer(); },            false },
+  { "StartWebServer",    [](){ WS::startWebServer(); },            false },
   { "StopWiFi",          [](){ WiFi.mode(WIFI_OFF); },         false },
   { "StopMouse",         [](){ AbsMouse.end(); },              false },
-  { "logs",              [](){ printdmesg( serialprintln ); }, false },
+  { "logs",              [](){ Logger::printdmesg( serialprintln ); }, false },
   //{"StopUSB", [](){ } },
   //{"StopWebServer", [](){  } },
   //{"SetWiFiMode", [](){  } },
   //{"SetWiFiSSID", [](){  } },
   //{"SetWiFiPass", [](){  } },
 };
-
 
 duckCommandSet WUDDuckCommandsSet = {WUDDuckCommands, sizeof( WUDDuckCommands ) / sizeof( duckCommand )};
 
@@ -341,12 +337,12 @@ duckCommandSet WUDDuckCommandsSet = {WUDDuckCommands, sizeof( WUDDuckCommands ) 
 void runpayload( fs::FS *fs, const char* payload)
 {
   if( !fs->exists( payload ) ) {
-    logsprintf("runpayload error: file %s does not exist", payload );
+    Logger::logsprintf("runpayload error: file %s does not exist", payload );
     return;
   }
   fs::File f = fs->open(payload, "r");
   if( !f ) {
-    logsprintf("runpayload error: file %s cannot be opened", payload );
+    Logger::logsprintf("runpayload error: file %s cannot be opened", payload );
     return;
   }
   String fileContent = "";
@@ -357,7 +353,7 @@ void runpayload( fs::FS *fs, const char* payload)
   }
   f.close();
   //duckparser::parse(fileContent);
-  logsprintf("payload from file %s run successfully", payload );
+  Logger::logsprintf("payload from file %s run successfully", payload );
 }
 
 
@@ -369,12 +365,14 @@ void setup()
   //HID.onEvent(usbEventCallback);
   WiFi.onEvent(WiFiEventCallback);
   // attach loggers to USB items, messages are deferred for later viewing with ducky "logs" command
-  USBPenDriveLogger = logsprintf;
+  USBPenDriveLogger        = Logger::logsprintf;
 
-  WebServerLogger = logmsg;
-  MouseLogger = logmsg;
-  WebServerLogsPrinter = printdmesg; // web server can deliver logs
-  HIDKeySender = duckparser::parse;
+  WS::WebServerLogger      = Logger::logmsg;          // basic logger
+  WS::WebServerLogsPrinter = Logger::printdmesg; // logs history printer
+  WS::HIDKeySender         = duckparser::parse;  // string quacker
+  WS::runpayload           = runpayload;           // file quacker
+
+  MouseLogger              = Logger::logmsg;
 
   // attach custom ducky commands to the payload runner
   duckparser::init(&WUDDuckCommandsSet);
@@ -396,8 +394,8 @@ void setup()
 
 void loop()
 {
-  if( webserver_begun ) server.handleClient(); // process webserver commands
-  if( usbserial_begun && USBSerial.available() )     // process serial commands
+  if( WUDStatus::webserver_begun ) WS::server.handleClient(); // process webserver commands
+  if( WUDStatus::usbserial_begun && USBSerial.available() )     // process serial commands
   {
     String line = "";
     while( USBSerial.available() && line.length()<MAX_SERIAL_INPUT ) line += (char)USBSerial.read();

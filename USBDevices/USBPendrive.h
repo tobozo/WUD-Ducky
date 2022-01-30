@@ -237,12 +237,12 @@ static int32_t onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t bufs
 
 bool initPenDrive()
 {
-  if( pendrive_begun ) {
+  if( WUDStatus::pendrive_begun ) {
     USBPendriveLog("PenDrive already started");
     return true;
   }
 
-  if( !sd_begun ) {
+  if( !WUDStatus::sd_begun ) {
     if( !initSD() ) duckyFS = &SPIFFS;
     else duckyFS = &SD;
   }
@@ -253,34 +253,34 @@ bool initPenDrive()
   MSC.onStartStop(onStartStop);
   MSC.mediaPresent(true);
 
-  if( !sd_begun ) {
+  if( !WUDStatus::sd_begun ) {
     // no SD card is present or was detected, spawn a fake volume with a readme.txt
     MSC.onRead(onReadDefault);
     MSC.onWrite(onWriteDefault);
-    pendrive_begun = MSC.begin(DISK_SECTOR_COUNT, DISK_SECTOR_SIZE);
+    WUDStatus::pendrive_begun = MSC.begin(DISK_SECTOR_COUNT, DISK_SECTOR_SIZE);
     USBPendriveLog("SD Card not present, spawning fake partition");
   } else {
     MSC.onRead(onRead);
     MSC.onWrite(onWrite);
-    pendrive_begun = MSC.begin( SD.cardSize()/512, 512 );
-    if( USBPenDriveLogger ) USBPenDriveLogger("PenDrive+SD %s", pendrive_begun?"started successfully":"failed to start" );
+    WUDStatus::pendrive_begun = MSC.begin( SD.cardSize()/512, 512 );
+    if( USBPenDriveLogger ) USBPenDriveLogger("PenDrive+SD %s", WUDStatus::pendrive_begun?"started successfully":"failed to start" );
   }
 
-  ledControl::set( pendrive_begun );
+  ledControl::set( WUDStatus::pendrive_begun );
 
-  return pendrive_begun;
+  return WUDStatus::pendrive_begun;
 }
 
 void deinitPenDrive()
 {
-  if( pendrive_begun ) {
+  if( WUDStatus::pendrive_begun ) {
     MSC.end();
-    pendrive_begun = false;
+    WUDStatus::pendrive_begun = false;
     USBPendriveLog("PenDrive stopped");
   } else {
     USBPendriveLog("PenDrive not running, nothing to stop");
   }
-  ledControl::set( pendrive_begun );
+  ledControl::set( WUDStatus::pendrive_begun );
 }
 
 
@@ -306,13 +306,13 @@ bool initSD(int8_t sck, int8_t miso, int8_t mosi, int8_t ss)
 
   // hammering the SD is necessary since SD.h was fucked up (2.0.2)
   do {
-    sd_begun = SD.begin(ss, SPI, 40000000);
-    if(sd_begun) break;
+    WUDStatus::sd_begun = SD.begin(ss, SPI, 40000000);
+    if(WUDStatus::sd_begun) break;
     USBPendriveLog("SD Card Mount attempt: " + String(attempts));
     vTaskDelay(100);
   } while( attempts++ <= maxattempts );
 
-  if( !sd_begun) {
+  if( !WUDStatus::sd_begun) {
     USBPendriveLog("SD Card Mount Failed");
     return false;
   }
@@ -330,9 +330,9 @@ bool initSD(int8_t sck, int8_t miso, int8_t mosi, int8_t ss)
 
 void deinitSD()
 {
-  if( pendrive_begun ) {
+  if( WUDStatus::pendrive_begun ) {
     deinitPenDrive();
   }
   SD.end();
-  sd_begun = false;
+  WUDStatus::sd_begun = false;
 }

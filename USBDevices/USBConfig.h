@@ -19,3 +19,5 @@
 
 
 #include "USB.h"
+#include "../logger.h"
+#include "../status.h"

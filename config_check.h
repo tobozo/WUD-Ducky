@@ -95,5 +95,5 @@
 #include <SD.h>
 #include "logger.h"
 #include "WiFiDuck/config.h"
-//#include "led_controls.h"
-
+// floating filesystem
+static fs::FS* duckyFS = nullptr;

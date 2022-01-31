@@ -74,7 +74,7 @@ namespace ledControl
          digitalWrite( led_pin, enabled ? LOW : HIGH );
          laststate = enabled;
       }
-      vTaskDelay( 60 ); // 30 ticks per second
+      vTaskDelay( 200 ); // 5 ticks per second
     }
   }
   void init()

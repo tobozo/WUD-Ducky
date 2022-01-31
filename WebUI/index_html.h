@@ -74,14 +74,7 @@ const char* index_html = R"indexHTML(
       <input class="toggle-button" type="radio" name="compact-view" value="off" id="cv2" checked>
       <label class="toggle-button" for="cv1">☰</label>
       <label class="toggle-button" for="cv2">☶</label>
-      <table class="fixed">
-        <thead><tr>
-          <th>Name</th>
-          <th>Size</th>
-          <th class="action-tab" colspan="2">Actions</th>
-        </tr></thead>
-        <tbody id="cont-files"></tbody>
-      </table>
+      <dl class="fixed table" id="cont-files"></dl>
     </div>
     <div id="filesystemlogs">
       <div id="logs" style="white-space:pre"></div>

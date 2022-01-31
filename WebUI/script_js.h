@@ -248,33 +248,50 @@ function loadPage(dirpath) {
             } else fsTab.innerHTML = "No filesystem info in JSON";
           } else document.body.innerHTML += "Can't find filesystem-tab div";
           if( filesList ) {
-            filesList.innerHTML = '';
+            const tableHeaders = {
+              "name":`<dt class="th file-name">Name</dt>`,
+              "size":`<dt class="th file-size">Size</dt>`,
+              'action':`<dt class="th file-action">Actions</dt>`
+            };
+            const tableHeader = `
+              ${tableHeaders.name}
+              ${tableHeaders.size}
+              ${tableHeaders.action}
+            `;
+            filesList.innerHTML = `<div class="tr thead">${tableHeader}</div>`;
             let hasQuackFile = false; // not used yet but may be useful to raise a status icon
-            res.files.forEach(i => {
-              const isQuackFile = (i.name).match(/quack/);
-              const ext = i.name.split('.').pop();
-              const isplaintext = i.type == 'file' && ext.match(/svg|js|css|txt|html?/);
-              const isWritable  = !i.readonly;
+            res.files.forEach( (elem, pos) => {
+              const isQuackFile = (elem.name).match(/quack/);
+              const ext = elem.name.split('.').pop();
+              const isplaintext = elem.type == 'file' && ext.match(/svg|js|css|txt|html?/);
+              const isWritable  = !elem.readonly;
               // using inline 'onclick' instead of 'addEventListener' to avoid memory leaks
-              const runCell   = isQuackFile ? `<button class="action-button" onclick=runPayload("${encodeURI(i.name)}")>⏻</button>` : '';
-              const delCell   = (isReadOnlyFS || !isWritable) ? '' : `<button type="submit" class="action-button" onclick="deleteFile('${encodeURI(i.name)}')">❌</button>`;
-              const editCell  = isReadOnlyFS ? '' : isplaintext ? `<button type="submit" class="action-button" onclick="editFile('${encodeURI(i.name)}')">🖉</button>` : '';
-              const typeCell  = i.type == 'dir' ? '📁' : isQuackFile ? '🦆' : '🗎';
-              const typeTitle = isQuackFile ? 'Payload' : i.type;
-              const sizeCell  = formatBytes( i.size );
+              const runCell   = isQuackFile ? `<button class="action-button" onclick=runPayload("${encodeURI(elem.name)}")>⏻<span>Run</span></button>` : '';
+              const delCell   = (isReadOnlyFS || !isWritable) ? '' : `<button type="submit" class="action-button" onclick="deleteFile('${encodeURI(elem.name)}')">❌<span>Delete</span></button>`;
+              const editCell  = isReadOnlyFS ? '' : isplaintext ? `<button type="submit" class="action-button" onclick="editFile('${encodeURI(elem.name)}')">🖉<span>Edit</span></button>` : '';
+              const typeCell  = elem.type == 'dir' ? '📁' : isQuackFile ? '🦆' : '🗎';
+              const typeTitle = isQuackFile ? 'Payload' : elem.type;
+              const sizeCell  = formatBytes( elem.size );
               const linkEvt   = ` onclick="loadPage(location.pathname+this.href);return false;" `
-              const linkCell  = `<a href="${encodeURI(i.name)}" ${i.type == 'file' ? '' : linkEvt}>${i.name.substring(1)}</a>`;
-              let actions   = `${runCell}${editCell}${delCell}`;
+              const linkCell  = `<a href="${encodeURI(elem.name)}" ${elem.type == 'file' ? '' : linkEvt}>${elem.name.substring(1)}</a>`;
+              // used to toggle compact/detailed item view with css rules
+              const adjView   = `<label class="item-expander" for="toggler-${pos}">@</label><input class="item-expander" id="toggler-${pos}" type="checkbox">`;
+              let actions     = `${runCell}${editCell}${delCell}`;
+              let hasActions  = !(actions === '');
 
               hasQuackFile = isQuackFile ? true : hasQuackFile;
-              if( actions == '' ) actions = 'n/a';
+              if( !hasActions ) actions = 'n/a';
 
               filesList.innerHTML +=
-                `<tr>
-                    <td data-column="${typeTitle}" class="file-name" title="${typeTitle}"><span>${typeCell}</span>${linkCell}</td>
-                    <td data-column="Size" class="file-size" title="${i.size} Bytes">${sizeCell}</td>
-                    <td data-column="Actions" class="action-tab">${actions}</td>
-                </tr>`
+                `<div class="tr tbody ${hasActions?'has-actions':''}">
+                    ${adjView}
+                    ${tableHeaders.name}
+                    <dd class="file-name" title="${typeTitle}"><span>${typeCell}</span>${linkCell}</dd>
+                    ${tableHeaders.size}
+                    <dd class="file-size" title="${elem.size} Bytes">${sizeCell}</dd>
+                    ${tableHeaders.action}
+                    <dd class="file-action">${actions}</dd>
+                </div>`
               ;
             });
           } else document.body.innerHTML += "No file list container";

@@ -39,39 +39,154 @@ struct Poil
   const char* value;
 };
 
+struct Poils
+{
+  Poil* poils;
+  size_t count;
+};
+
 
 struct Moustache
 {
 
-  String *_tpl = nullptr;
+  String *output = nullptr;
+  const char* tpl = nullptr;
+  Poils *barbe = nullptr;
 
-  void set( String *tpl )
+  void setOutput( String *_output )
   {
-    _tpl = tpl;
+    output = _output;
+  }
+  void setBarbe( Poils* _barbe )
+  {
+    barbe = _barbe;
   }
 
-  void load( const char* tpl )
+  void setTemplate( const char* _tpl )
   {
-    if( _tpl == nullptr ) {
+    tpl = _tpl;
+  }
+
+  void set( const char* _tpl, String *_output, Poils* _barbe )
+  {
+    tpl    = _tpl;
+    output = _output;
+    barbe  = _barbe;
+  }
+
+  void loadTemplate( const char* _tpl )
+  {
+    if( output == nullptr ) {
       // wut ?
       return;
     }
-    *_tpl = String( tpl );
+    *output = String( _tpl );
   }
-
+/*
   void parse( Poil *poil )
   {
     String tige  = String(MOUSTACHE_OPEN) + String(poil->name) + String(MOUSTACHE_CLOSE);
     String bulbe = String( poil->value );
-    _tpl->replace( tige, bulbe );
+    output->replace( tige, bulbe );
   }
 
-  void parse( Poil* poils, size_t count )
+  void parse( Poil* _poils, size_t count )
   {
-    if( !poils || count == 0 ) return; // can't shave a bald beard!
+    if( !_poils || count == 0 ) return; // can't shave a bald beard!
     for( int i=0; i<count; i++ )
-      parse( &poils[i] );
+      parse( &_poils[i] );
   }
+
+  void slowparse( Poils* _barbe )
+  {
+    parse( _barbe->poils, _barbe->count );
+  }
+*/
+  void parse()
+  {
+    if( barbe == nullptr || output == nullptr ) return;
+    if( barbe->count == 0 || barbe->poils == nullptr ) return;
+    if( tpl == nullptr ) return;
+    fastparse();
+    //loadTemplate( tpl );
+    //slowparse( barbe );
+  }
+
+
+  void fastparse()
+  {
+    #define max_marker_size 33
+    size_t len = strlen(tpl);
+    bool in_marker = false;
+    size_t marker_size = 0;
+    int marker_start = 0;
+    char marker_name[max_marker_size];
+    for( int i=0; i<len;i++ ) {
+      /*
+      if( in_marker  && i+1<len && tpl[i] == MOUSTACHE_CLOSE[0] && tpl[i+1] == MOUSTACHE_CLOSE[1] ) {
+        in_marker = false;
+      }*/
+      if( i+1<len && tpl[i] == MOUSTACHE_OPEN[0] && tpl[i+1]  == MOUSTACHE_OPEN[1] )  {
+        in_marker = true;
+        marker_size = 0;
+        memset( marker_name, 0, max_marker_size );
+        marker_start = i;
+        i += 2; // skip opening moustache
+        while( in_marker && marker_size < max_marker_size && i < len+3 ) {
+          marker_name[marker_size++] = tpl[i++];
+          in_marker = tpl[i] != MOUSTACHE_CLOSE[0] && tpl[i+1] != MOUSTACHE_CLOSE[1];
+        }
+        if( !in_marker && marker_size > 0 && marker_name[0] != '\0' ) { // found marker name
+          marker_name[marker_size] = tpl[i]; // fetch last letter
+          bool found = false;
+          for( int j=0; j<barbe->count; j++ ) { // foreach named marker
+            if( strcmp( barbe->poils[j].name, marker_name) == 0) { // marker name matches?
+              *output += String( barbe->poils[j].value ); // append marker value
+              found = true;
+              break;
+            }
+          }
+          if( ! found ) {
+            *output += "!!" + String( marker_name ) + "!!";
+          }
+          i += 2; // skip closing moustache
+        } else {
+          // false positive, append skipped chunks
+          for( int j=marker_start; j<=i; j++ ) *output += String( tpl[j] );
+        }
+      } else {
+        *output += String( tpl[i] );
+      }
+
+    }
+
+
+
+    char str[] = "Geeks-for-Geeks";
+
+    // Returns first token
+    char* token = strtok(str, "-");
+
+    // Keep printing tokens while one of the
+    // delimiters present in str[].
+    while (token != NULL) {
+        printf("%s\n", token);
+        token = strtok(NULL, "-");
+    }
+
+
+    char* token_in = strtok(str, MOUSTACHE_OPEN);
+    if( token_in == NULL ) return;
+    char* token_out = strtok(str, MOUSTACHE_CLOSE);
+    printf("%s\n", token_out);
+
+
+
+  }
+
+
+
+
 };
 
 

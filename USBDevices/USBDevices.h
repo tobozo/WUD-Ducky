@@ -59,11 +59,29 @@ static void usbEventCallback(void* arg, esp_event_base_t event_base, int32_t eve
       case ARDUINO_USB_HID_SET_IDLE_EVENT: Logger::logsprintf("HID SET IDLE: %u", data->set_idle.idle_rate); break;
       default: break;
     }
-  } else if(event_base == ARDUINO_USB_HID_KEYBOARD_EVENTS) {
+  }/* else if(event_base == ARDUINO_USB_HID_KEYBOARD_EVENTS) {
     arduino_usb_hid_keyboard_event_data_t * data = (arduino_usb_hid_keyboard_event_data_t*)event_data;
     switch (event_id){
       case ARDUINO_USB_HID_KEYBOARD_LED_EVENT: Logger::logsprintf("HID KEYBOARD LED: NumLock:%u, CapsLock:%u, ScrollLock:%u", data->numlock, data->capslock, data->scrolllock); break;
       default: break;
     }
+  }*/
+}
+
+
+static void kbdEventCallback(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+{
+  if(event_base == ARDUINO_USB_HID_KEYBOARD_EVENTS) {
+    arduino_usb_hid_keyboard_event_data_t * data = (arduino_usb_hid_keyboard_event_data_t*)event_data;
+    switch (event_id){
+      case ARDUINO_USB_HID_KEYBOARD_LED_EVENT:
+        WUDStatus::numlock_on    = data->numlock;
+        WUDStatus::capslock_on   = data->capslock;
+        WUDStatus::scrolllock_on = data->scrolllock;
+        Logger::logsprintf("HID KEYBOARD LED: NumLock:%u, CapsLock:%u, ScrollLock:%u", data->numlock, data->capslock, data->scrolllock);
+      break;
+      default: break;
+    }
   }
 }
+

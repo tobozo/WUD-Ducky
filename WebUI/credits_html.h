@@ -39,32 +39,27 @@ const char* credits_html  = R"CreditsHTML(
   <link rel="stylesheet" type="text/css" href="/styles.css">
   <meta name="description" content="WUD-Ducky">
   <title>WUD-Ducky</title>
-
 </head>
 
-<body class="about">
+<body class="credits">
   <nav>
-    <ul class="menu">
-      <li><a href="/info">System information</a></li>
-      <li><a href="/explorer">Filesystem explorer</a></li>
-      <li><a href="/nutquacker">Live payload sender</a></li>
-    </ul>
+    <button id="info" class="action-button" onClick="top.location='/info'">🛈</button>
+    <button id="quack" class="action-button" onClick="top.location='/'">🔙</button>
   </nav>
-
-  <div id="status"></div>
+  <h1>WUD Ducky</h1>
 
   <div class="container">
     <div class="row">
       <div class="col-12">
-        <h1 class="header">Credits</h1>
+        <h2 class="header">Credits</h2>
 
-        <h2>Disclaimer</h2>
+        <h3>Disclaimer</h3>
         <p class="centered" data-translate="disclaimer">
           This project is a proof of concept for testing and educational purposes.<br>
           <br>
           Use it only against your own networks and devices!<br>
           <br>
-          It uses USB to mock devices and deliver payloads on a victim device.<br>
+          The purpose of this application is to use the ESP32-S2 internal USB chip to mock devices and deliver HID payloads.<br>
           Please check the legal regulations in your country before using it.<br>
           <br>
           <br>
@@ -75,17 +70,15 @@ const char* credits_html  = R"CreditsHTML(
 
         <h2>Acknowledgements</h2>
         <p>
-          A huge thanks to:<br>
+          Huge thanks to:<br>
         <ul>
-          <li><a href="http://github.com/spacehuhn" target="_blank">@spacehuhn</a></li>
+          <li><a href="http://github.com/spacehuhn" target="_blank">@spacehuhn</a> for letting his WiFiDuck project code be partially recycled into this application.</li>
+          <li><a href="http://github.com/chegewara" target="_blank">@chegewara</a> for sharing his expertise on USB devices and helping me start this project.</li>
         </ul>
-        for letting his WiFiDuck project code be partially recycled into this application.<br>
         <br>
-        We also thank Espressif and their community for this awesome chip and all the software and
-        hardware projects around it and the countless tutorials you can find online!<br>
         </p>
 
-        <h2>License</h2>
+        <h3>License</h3>
         <p>
           <b>In regards to the firmware:</b><br>
           <br>

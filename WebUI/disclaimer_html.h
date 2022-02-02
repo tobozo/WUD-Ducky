@@ -40,6 +40,7 @@ const char* disclaimer_html  = R"DisclaimerHTML(
   <title>WUD-Ducky</title>
 </head>
 <body class="disclaimer">
+  <h1>WUD Ducky</h1>
   <div class="container">
     <div class="row">
       <div class="col-12">
@@ -49,7 +50,7 @@ const char* disclaimer_html  = R"DisclaimerHTML(
           <br>
           Use it only against your own networks and devices!<br>
           <br>
-          It uses USB to mock devices and deliver payloads on a victim device.<br>
+          The purpose of this application is to use the ESP32-S2 internal USB chip to mock devices and deliver HID payloads.<br>
           Please check the legal regulations in your country before using it.<br>
           <br>
           <br>
@@ -58,7 +59,7 @@ const char* disclaimer_html  = R"DisclaimerHTML(
             href="https://github.com/tobozo/WUD-Ducky">github.com/tobozo/WUD-Ducky</a>
         </p>
         <p class="centered bold">
-          <a class="button" href="/explorer" data-translate="disclaimer-button">I have read and understood the
+          <a class="button" href="/" data-translate="disclaimer-button">I have read and understood the
             notice above</a>
         </p>
       </div>
@@ -68,7 +69,7 @@ const char* disclaimer_html  = R"DisclaimerHTML(
     <span id="version">Version 0.0.1</span>
     <br>
     <br>
-    <a href="https://github.com/tobozo/WUD-Ducky" target="_blank">Repository</a> | <a href="/about.html">Credits</a>
+    <a href="https://github.com/tobozo/WUD-Ducky" target="_blank">Repository</a> | <a href="/credits.html">Credits</a>
   </footer>
 </body>
 

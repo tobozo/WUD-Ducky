@@ -48,36 +48,74 @@ const char* index_html = R"indexHTML(
   <title>WUD-NutQuacker</title>
   <link rel="stylesheet" type="text/css" href="/styles.css">
 </head>
-<body class="explorer">
+<body class="explorer nodelete">
   <audio autoplay src="/Quack.wav"></audio>
+  <input type="checkbox" id="control-panel-toggle" style="display: none;">
   <nav>
     <button id="reload" class="action-button" onClick="history.go(0)">🗘</button>
     <button id="info" class="action-button" onClick="top.location='/info'">🛈</button>
     <button id="quack" class="action-button" onClick="top.location='/'">🦆</button>
+    <label for="newfile" class="action-button action-button icon upload"></label>
+    <button id="settings" class="action-button"><label for="control-panel-toggle">⚙</label></button>
   </nav>
   <div class="main">
     <div class="fixed">
       <h1>WUD Ducky</h1>
-      <div id="uploader-tab">
-        Upload file:
-        <label for="newfile">
-          <button class="upload-button">⬆</button><input id="newfile" type="file" onchange="setpath()"><input id="filepath" type="hidden"><button id="upload" type="button" onclick="upload()">Upload</button>
-        </label>
-      </div>
-      <div id="filesystem-tab">
-        <button id="fs-sd" data-name="sd">SD</button>
-        <button id="fs-spiffs" data-name="spiffs">SPIFFS</button>
+      <div id="control-panel">
+        <h2>Filesystem</h2>
+        <ul class="radio-switch">
+          <li class="radio-switch__item">
+            <input type="radio" class="radio-switch__input sr-only" id="fs1" name="fs-switcher" data-fs="sd" onclick="onFSRadioClick(this)">
+            <label for="fs1" class="radio-switch__label icon sdcard"></svg>SD</label>
+          </li>
+
+          <li class="radio-switch__item">
+            <input type="radio" class="radio-switch__input sr-only" id="fs3" name="fs-switcher" data-fs="spiffs" checked onclick="onFSRadioClick(this)">
+            <label for="fs3" class="radio-switch__label icon spiffs">SPIFFS</label>
+            <div class="radio-switch__marker" aria-hidden="true"></div>
+          </li>
+        </ul>
+
+        <h2>Logging</h2>
+        <ul class="radio-switch">
+          <li class="radio-switch__item">
+            <input type="radio" class="radio-switch__input sr-only" id="log1" name="logs-switcher" data-logs="on" checked>
+            <label for="log1" class="radio-switch__label"></svg>ON</label>
+          </li>
+
+          <li class="radio-switch__item">
+            <input type="radio" class="radio-switch__input sr-only" id="log2" name="logs-switcher" data-logs="off">
+            <label for="log2" class="radio-switch__label">OFF</label>
+            <div class="radio-switch__marker" aria-hidden="true"></div>
+          </li>
+        </ul>
+
+        <div>
+          <input class="toggle-button" type="checkbox" id="view-logs-toggler" onclick="if(checked) loadLogs()">
+          <label for="view-logs-toggler" class="">🗎 View logs</label>
+          <div id="filesystemlogs">
+            <button class="clear-logs-button">Clear logs</button>
+            <div id="logs" style="white-space:pre"></div>
+          </div>
+        </div>
+
       </div>
     </div>
-    <div>
-      <input class="toggle-button" type="radio" name="compact-view" value="on"  id="cv1">
-      <input class="toggle-button" type="radio" name="compact-view" value="off" id="cv2" checked>
-      <label class="toggle-button" for="cv1">☰</label>
-      <label class="toggle-button" for="cv2">☶</label>
+
+    <div id="uploader-tab">
+      <input id="newfile" type="file" onchange="setpath()">
+      <input id="filepath" type="hidden">
+      <button id="upload" type="button" onclick="upload()">Upload</button>
+    </div>
+
+    <div class="files-view">
+      <input class="toggle-button" type="radio" name="compact-view" value="on"  id="cv1" checked>
+      <input class="toggle-button" type="radio" name="compact-view" value="off" id="cv2">
+      <div class="toggle-buttons">
+        <label class="toggle-button" for="cv1">☰</label>
+        <label class="toggle-button" for="cv2">☶</label>
+      </div>
       <dl class="fixed table" id="cont-files"></dl>
-    </div>
-    <div id="filesystemlogs">
-      <div id="logs" style="white-space:pre"></div>
     </div>
   </div>
   <script type="text/javascript" src="/script.js"></script>

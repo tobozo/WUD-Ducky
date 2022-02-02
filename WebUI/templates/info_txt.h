@@ -32,9 +32,12 @@ const char* info_txt = R"infoTXT(
 ----------------------
 
   == Software ==
-     SDK version: {{getSdkVersion}}
-     Chip Id: {{getChipModel}}
-     WebServer: {{webserver_begun}}
+    SDK version: {{getSdkVersion}}
+    Chip Id: {{getChipModel}}
+    WebServer: {{webserver_begun}}
+    Logging: {{logging_enabled}}
+    Serial debug: {{hwserial_begun}}
+       Debug port: {{SerialDebug}}
 
   == CPU ==
     Frequency: {{getCpuFreqMHz}} MHz
@@ -64,9 +67,11 @@ const char* info_txt = R"infoTXT(
     Serial Number: {{USB_SERIAL}}
     HUB: {{usb_begun}}
     HID: {{hid_ready}}
-    Serial (user port) : {{usbserial_begun}}
-    Serial (debug port): {{hwserial_begun}}
+    Serial : {{usbserial_begun}}
     Keyboard: {{keyboard_begun}}
+       Caps Lock:   {{capslock_on}}
+       Num Lock:    {{numlock_on}}
+       Scroll Lock: {{scrolllock_on}}
     Mouse: {{absmouse_begun}}
     PenDrive: {{pendrive_begun}}
 

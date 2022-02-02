@@ -31,35 +31,36 @@
 #include "../logger.h"
 
 Preferences _prefs;
+#define PREF_NAMESPACE "WUD"
 
 namespace prefs
 {
 
   void reset()
   {
-     _prefs.begin("WUD", false );
+     _prefs.begin(PREF_NAMESPACE, false );
      _prefs.clear();
      _prefs.end();
   }
 
   void set( const char *name, const char *value, size_t len )
   {
-    _prefs.begin("WUD", false );
+    _prefs.begin(PREF_NAMESPACE, false );
     char buf[len+2] = {0};
     snprintf( buf, len+1, "%s", value );
     if( _prefs.putString(name, buf) ) {
-      Logger::logsprintf("Pref saved: %s=%s", name, buf );
+      Logger::logsprintf("Pref saved: '%s' (%d bytes)", name, len-1 );
     } else {
-      Logger::logsprintf("Pref saving failed! %s=%s", name, value );
+      Logger::logsprintf("Pref saving failed! '%s' (%d bytes)", name, len-1 );
     }
     _prefs.end();
   }
   void get( const char *name, char *dest, size_t max_len, const char *default_value )
   {
-    _prefs.begin("WUD", true );
+    _prefs.begin(PREF_NAMESPACE, true );
     size_t len = _prefs.getString(name, dest, max_len );
     if( len > 0 ) {
-      Logger::logsprintf("Pref thawed: %s='%s' (default='%s')", name, dest, default_value );
+      Logger::logsprintf("Pref thawed: %s (%d bytes)", name, len );
     } else {
       len = strlen(default_value)+1;
       snprintf( dest, max_len, "%s", default_value );

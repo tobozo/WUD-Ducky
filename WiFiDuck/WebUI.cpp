@@ -44,6 +44,7 @@
 
 #include <WiFi.h>
 #include <SPIFFS.h>
+#include <ArduinoJson.h>
 
 extern fs::FS* duckyFS;
 
@@ -55,13 +56,15 @@ namespace WebUI
   DynamicWebContent DynamicDocuments[] =
   {
     {"info",            contentTypeHtml, getSystemInfoHTML },
+    {"info.json",       contentTypeJson, getSystemInfoJSON },
     {"list",            contentTypeHtml, ls },
     {"logs",            contentTypeText, getLogs },
+    {"index.html",      contentTypeHtml, getIndexPage },
   };
 
   StaticWebContent StaticDocuments[] =
   {
-    {"index.html",      contentTypeHtml, index_html },
+    //{"index.html",      contentTypeHtml, index_html },
     {"styles.css",      contentTypeCss,  styles_css},
     {"script.js",       contentTypeJs,   script_js },
     {"disclaimer.html", contentTypeHtml, disclaimer_html },
@@ -108,7 +111,9 @@ namespace WebUI
     }
   }
 
-  void getSystemInfo( String *output, bool html )
+
+
+  void getSystemInfo( String *output, output_format format )
   {
     using namespace WUDStatus;
     float flashFreqFloat = (float)ESP.getFlashChipSpeed() / 1000.0 / 1000.0;
@@ -132,9 +137,21 @@ namespace WebUI
     String VendorId        = "0x" + String( USB_VID, HEX );
     String MacAddr         = WiFi.macAddress();
     String IpAddr          = WiFi.localIP().toString();
+    #if ARDUINO_USB_CDC_ON_BOOT
+      const char* SerialDebug = "UART0";
+    #else
+      const char* SerialDebug = "USBSerial";
+    #endif
 
-    const char* on       = "online";
-    const char* off      = "offline";
+    const char* online     = "online";
+    const char* offline    = "offline";
+    const char* on         = "on";
+    const char* off        = "off";
+    const char* enabled    = "enabled";
+    const char* disabled   = "disabled";
+    const char* started    = "started";
+    const char* stopped    = "stopped";
+
     const char* fakepass = "*********";
 
     Poil tplvalues[] =
@@ -158,23 +175,27 @@ namespace WebUI
       { "USB_MANUFACTURER"   , USB_MANUFACTURER        },
       { "USB_PRODUCT"        , USB_PRODUCT             },
       { "USB_SERIAL"         , USB_SERIAL              },
-      { "usb_begun"          , usb_begun       ?on:off },
-      { "hwserial_begun"     , hwserial_begun  ?on:off },
-      { "usbserial_begun"    , usbserial_begun ?on:off },
-      { "keyboard_begun"     , keyboard_begun  ?on:off },
-      { "absmouse_begun"     , absmouse_begun  ?on:off },
+      { "SerialDebug"        , SerialDebug             },
+      { "usb_begun"          , usb_begun       ?started:stopped },
+      { "hwserial_begun"     , hwserial_begun  ?started:stopped },
+      { "usbserial_begun"    , usbserial_begun ?started:stopped },
+      { "keyboard_begun"     , keyboard_begun  ?started:stopped },
+      { "absmouse_begun"     , absmouse_begun  ?started:stopped },
       { "hid_ready"          , hid_ready       ?on:off },
-      { "sd_begun"           , sd_begun        ?on:off },
-      { "pendrive_begun"     , pendrive_begun  ?on:off },
-      { "spiffs_begun"       , spiffs_begun    ?on:off },
-      { "webserver_begun"    , webserver_begun ?on:off },
-
+      { "sd_begun"           , sd_begun        ?enabled:disabled },
+      { "pendrive_begun"     , pendrive_begun  ?enabled:disabled },
+      { "spiffs_begun"       , spiffs_begun    ?enabled:disabled },
+      { "webserver_begun"    , webserver_begun ?online:offline },
+      { "logging_enabled"    , Logger::enabled ?enabled:disabled },
+      { "numlock_on"         , numlock_on      ?on:off },
+      { "capslock_on"        , capslock_on     ?on:off },
+      { "scrolllock_on"      , scrolllock_on   ?on:off },
       { "MAC_ADDR"           , MacAddr.c_str()         },
       { "STA_ADDR"           , IpAddr.c_str()          },
-      { "softap_begun"       , softap_begun ?on:off    },
+      { "softap_begun"       , softap_begun ?online:offline    },
       { "AP_SSID"            , AP_SSID                 },
       { "AP_PASSWORD"        , fakepass/*AP_PASSWORD*/ },
-      { "wifista_begun"      , wifista_begun ?on:off   },
+      { "wifista_begun"      , wifista_begun ?started:stopped   },
       { "STA_SSID"           , STA_SSID                },
       { "STA_PASSWORD"       , fakepass/*STA_PASSWORD*/},
 
@@ -182,23 +203,48 @@ namespace WebUI
 
     size_t markers_count =  sizeof(tplvalues)/sizeof(Poil);
 
-    Moustache moustache;
-    moustache.set( output );
-    if( html == true ) moustache.load( info_html );
-    else moustache.load( info_txt );
-    moustache.parse( tplvalues, markers_count );
+    if( format == SYSINFO_HTML || format == SYSINFO_TXT ) {
+      Poils barbe = { tplvalues, markers_count };
+      Moustache moustache;
+      if( format == SYSINFO_HTML == true ) moustache.set( info_html, output, &barbe );
+      else moustache.set( info_txt, output, &barbe );
+      moustache.parse();
+    } else {
+      // SYSINFO_JSON
+      StaticJsonDocument<1024> sysInfoDoc;
+      for( int i=0; i<markers_count; i++ ) {
+        sysInfoDoc[tplvalues[i].name] = tplvalues[i].value;
+      }
+      serializeJsonPretty(sysInfoDoc, *output);
+    }
+  }
+
+
+  void getSystemInfoJSON( String *output )
+  {
+    getSystemInfo( output, SYSINFO_JSON );
   }
 
 
   void getSystemInfoHTML( String *output )
   {
-    getSystemInfo( output, true );
+    getSystemInfo( output, SYSINFO_HTML );
   }
 
 
   void getSystemInfoTXT( String *output )
   {
-    getSystemInfo( output, false );
+    getSystemInfo( output, SYSINFO_TXT );
+  }
+
+  void getIndexPage( String *output )
+  {
+    if( WUDStatus::disclaimer_done ) {
+      *output = String( index_html );
+    } else {
+      *output = String( disclaimer_html );
+      WUDStatus::disclaimer_done = true;
+    }
   }
 
 

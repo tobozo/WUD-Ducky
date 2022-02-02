@@ -43,62 +43,58 @@ const char* info_html = R"infoHTML(
 </head>
 <body class="info">
   <nav>
-    <button id="reload" class="action-button" onClick="history.go(0)">🗘</button>
-    <button id="info" class="action-button" onClick="top.location='/info'">🛈</button>
-    <button id="quack" class="action-button" onClick="top.location='/'">🦆</button>
+    <button id="quack" class="action-button" onClick="top.location='/'">🔙</button>
   </nav>
   <h1>WUD Ducky</h1>
   <h3>System Info</h3>
   <div class="infos">
     <h2>Software</h2>
       <dl>
-        <div><dt>SDK version</dt><dd>{{getSdkVersion}}</dd></div>
+        <div><dt>SDK version</dt><dd><span class="overflow-text">{{getSdkVersion}}</span></dd></div>
         <div><dt>Chip Id</dt><dd>{{getChipModel}}</dd></div>
-        <div><dt>WebServer</dt><dd>{{webserver_begun}}</dd></div>
+        <div><dt>WebServer</dt><dd><span class="{{webserver_begun}}">◉</span></dd></div>
+        <div><dt>Logging</dt><dd><span class="{{logging_enabled}}">◉</span></dd></div>
+        <div><dt>📟 Serial debug</dt><dd>{{SerialDebug}} <span class="{{hwserial_begun}}">◉</span></dd></div>
       </dl>
-    <h2>CPU</h2>
+    <h2>CPU / Flash</h2>
       <dl>
         <div><dt>CPU frequency</dt><dd>{{getCpuFreqMHz}} MHz</dd></div>
-      </dl>
-    <h2>Flash chip information</h2>
-      <dl>
+        <div><dt>Flash frequency</dt><dd>{{flashFreq}} MHz</dd></div>
         <div><dt>Flash chip Id</dt><dd>{{getFlashChipMode}}</dd></div>
         <div><dt>Estimated Flash size</dt><dd>{{getFlashChipSize}}</dd></div>
-        <div><dt>Flash frequency</dt><dd>{{flashFreq}} MHz</dd></div>
         <div><dt>Flash write mode</dt><dd>{{ideMode}}</dd></div>
       </dl>
-    <h2>Sketch information</h2>
+    <h2>Sketch</h2>
       <dl>
-        <div><dt>Sketch hash</dt><dd>{{getSketchMD5}}</dd></div>
-        <div><dt>Sketch size</dt><dd>{{getSketchSize}}</dd></div>
-        <div><dt>Free space available</dt><dd>{{getFreeSketchSpace}}</dd></div>
+        <div><dt>#️⃣ Sketch hash</dt><dd>{{getSketchMD5}}</dd></div>
+        <div><dt>📏 Sketch size</dt><dd>{{getSketchSize}}</dd></div>
+        <div><dt>🆓 Space available</dt><dd>{{getFreeSketchSpace}}</dd></div>
       </dl>
-    <h2>Heap information</h2>
+    <h2>Heap</h2>
       <dl>
-        <div><dt>Total size</dt><dd>{{getHeapSize}}</dd></div>
-        <div><dt>Free available</dt><dd>{{getFreeHeap}}</dd></div>
-        <div><dt>Lowest level since boot</dt><dd>{{getMinFreeHeap}}</dd></div>
-        <div><dt>Largest allocatable block</dt><dd>{{getMaxAllocHeap}}</dd></div>
+        <div><dt>∑ Total</dt><dd>{{getHeapSize}}</dd></div>
+        <div><dt>🆓 Available</dt><dd>{{getFreeHeap}}</dd></div>
+        <div><dt>🎚️ Min since boot</dt><dd>{{getMinFreeHeap}}</dd></div>
+        <div><dt>↕️ Max alloc</dt><dd>{{getMaxAllocHeap}}</dd></div>
       </dl>
-    <h2>USB information</h2>
+    <h2>USB</h2>
       <dl>
-        <div><dt>Vendor ID</dt><dd>{{USB_VID}}</dd></div>
-        <div><dt>Product ID</dt><dd>{{USB_PID}}</dd></div>
-        <div><dt>Manufacturer</dt><dd>{{USB_MANUFACTURER}}</dd></div>
-        <div><dt>Product Name</dt><dd>{{USB_PRODUCT}}</dd></div>
-        <div><dt>Serial Number</dt><dd>{{USB_SERIAL}}</dd></div>
-        <div><dt>HUB</dt><dd>{{usb_begun}}</dd></div>
-        <div><dt>HID</dt><dd>{{hid_ready}}</dd></div>
-        <div><dt>Serial (user port)</dt><dd>{{usbserial_begun}}</dd></div>
-        <div><dt>Serial (debug port)</dt><dd>{{hwserial_begun}}</dd></div>
-        <div><dt>Keyboard</dt><dd>{{keyboard_begun}}</dd></div>
-        <div><dt>Mouse</dt><dd>{{absmouse_begun}}</dd></div>
-        <div><dt>PenDrive</dt><dd>{{pendrive_begun}}</dd></div>
+        <div><dt>🏪  Vendor ID</dt><dd>{{USB_VID}}</dd></div>
+        <div><dt>📦  Product ID</dt><dd>{{USB_PID}}</dd></div>
+        <div><dt>🏭  Manufacturer</dt><dd>{{USB_MANUFACTURER}}</dd></div>
+        <div><dt>🏷️ Product Name</dt><dd>{{USB_PRODUCT}}</dd></div>
+        <div><dt>#️⃣  Serial Number</dt><dd>{{USB_SERIAL}}</dd></div>
+        <div><dt>✳️ HUB</dt><dd><span class="{{usb_begun}}">◉</span></dd></div>
+        <div><dt>🔘 HID</dt><dd><span class="{{hid_ready}}">◉</span></dd></div>
+        <div><dt>📟 Serial</dt><dd><span class="{{usbserial_begun}}">◉</span></dd></div>
+        <div><dt>⌨ Keyboard</dt><dd class="kbd"><span class="{{keyboard_begun}}">◉</span> <span title="Caps Lock {{capslock_on}}" class="key__button {{capslock_on}}">⇪</span><span title="Num Lock {{numlock_on}}" class="key__button {{numlock_on}}">⇭</span><span  title="Scroll Lock {{scrolllock_on}}" class="key__button {{scrolllock_on}}">⤓</span></dd></div>
+        <div><dt>🖱️ Mouse</dt><dd><span class="{{absmouse_begun}}">◉</span></dd></div>
+        <div><dt>💾 PenDrive</dt><dd><span class="{{pendrive_begun}}">◉</span></dd></div>
       </dl>
     <h2>Storage</h2>
       <dl>
-        <div><dt>SD</dt><dd>{{sd_begun}}</dd></div>
-        <div><dt>SPIFFS</dt><dd>{{spiffs_begun}}</dd></div>
+        <div><dt><span class="icon sdcard {{sd_begun}}" style=""></span> SD</dt><dd><span class="{{sd_begun}}">◉</span></dd></div>
+        <div><dt><span class="icon spiffs {{spiffs_begun}}" style=""></span> SPIFFS</dt><dd><span class="{{spiffs_begun}}">◉</span></dd></div>
       </dl>
   </div>
 </body>

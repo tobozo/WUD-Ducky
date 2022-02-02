@@ -37,6 +37,7 @@
 #include "WiFiDuck/WebServer.cpp"  // WUD Ducky Web UI
 
 
+
 static void WiFiEventCallback(WiFiEvent_t event)
 {
   const char * arduino_event_names[] = {
@@ -64,7 +65,7 @@ void serialprintln(String msg)
 void SystemInfo()
 {
   String sysInfo;
-  WebUI::getSystemInfo( &sysInfo, false );
+  WebUI::getSystemInfo( &sysInfo, WebUI::SYSINFO_TXT );
   USBSerial.println( sysInfo );
 }
 
@@ -206,6 +207,7 @@ void InitWiFiSTA()
   }
   WUDStatus::wifista_begun = true;
   Logger::logmsg( "WiFi STA IP: " + WiFi.localIP().toString() );
+  NTP::enable();
 }
 
 
@@ -219,19 +221,24 @@ void StopWiFiSTA()
 
 
 
+
+
+
+
 void InitSPIFFS()
 {
   if( !SPIFFS.begin() ) {
     Logger::logmsg("SPIFFS failed!");
     return;
   }
+  duckyFS = &SPIFFS;
   WUDStatus::spiffs_begun = true;
 }
 
 void InitSD()
 {
   if( !initSD() ) duckyFS = &SPIFFS;
-  else duckyFS = &SD;
+  //else duckyFS = &SD;
 }
 
 void InitMouse()
@@ -322,6 +329,8 @@ duckCommand WUDDuckCommands[] =
   { "StopWiFi",          [](){ WiFi.mode(WIFI_OFF); },         false },
   { "StopMouse",         [](){ AbsMouse.end(); },              false },
   { "logs",              [](){ Logger::printdmesg( serialprintln ); }, false },
+  { "logs-disable",      [](){ Logger::disable(); },           false },
+  { "logs-enable",       [](){ Logger::enable(); },            false },
   //{"StopUSB", [](){ } },
   //{"StopWebServer", [](){  } },
   //{"SetWiFiMode", [](){  } },
@@ -361,7 +370,7 @@ void runpayload( fs::FS *fs, const char* payload)
 void setup()
 {
   //USB.onEvent(usbEventCallback);
-  //Keyboard.onEvent(usbEventCallback);
+  Keyboard.onEvent(kbdEventCallback);
   //HID.onEvent(usbEventCallback);
   WiFi.onEvent(WiFiEventCallback);
   // attach loggers to USB items, messages are deferred for later viewing with ducky "logs" command

@@ -28,6 +28,7 @@
 
 #include "./WebServer.hpp"
 #include "WebUI.cpp"
+#include "NTP.cpp"
 
 extern fs::FS* duckyFS;
 
@@ -37,7 +38,7 @@ namespace WS
   void WebServerLogMsg( String msg )
   {
     if( WebServerLogger ) WebServerLogger(msg);
-    //else USBSerial.println( msg );
+    //else HWSerial.println( msg );
   }
 
 
@@ -224,7 +225,7 @@ namespace WS
   void handleInfo()
   {
     String sysInfo;
-    WebUI::getSystemInfo( &sysInfo, true );
+    WebUI::getSystemInfo( &sysInfo, WebUI::SYSINFO_HTML );
     server.send(200, contentTypeHtml, sysInfo );
     sysInfo = String();
   }
@@ -285,16 +286,12 @@ namespace WS
     // serving static files from SPIFFS is fucked up and unregisters all the other handlers
     // server.serveStatic("/", SPIFFS, "/" );
 
-    // data endpoints, with computed response
-    //server.on("/list", HTTP_GET, handleFileList); // JSON File listing
-    //server.on("/logs", HTTP_GET, handleGetLogs);  // text logs
-
     // action endpoints with status response
     server.on("/changefs", HTTP_GET, handleChangeFS );
     server.on("/delete", HTTP_POST, handleFileDelete);
     server.on("/quack", HTTP_GET, handleKeySend);
     server.on("/runpayload", HTTP_GET, handleRunPayload);
-    //server.on("/runpayload", HTTP_POST, handleRunPayload);
+
     server.on("/upload", HTTP_POST, []() {
       server.sendHeader("Location", String("/"), true);
       server.send(302, contentTypeText, "");

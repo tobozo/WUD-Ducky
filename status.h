@@ -36,5 +36,9 @@ namespace WUDStatus
   bool webserver_begun = false;
   bool softap_begun    = false;
   bool wifista_begun   = false;
+  bool disclaimer_done = false;
+  bool numlock_on      = false;
+  bool capslock_on     = false;
+  bool scrolllock_on   = false;
 
 };

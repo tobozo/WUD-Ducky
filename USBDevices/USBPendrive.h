@@ -243,8 +243,9 @@ bool initPenDrive()
   }
 
   if( !WUDStatus::sd_begun ) {
-    if( !initSD() ) duckyFS = &SPIFFS;
-    else duckyFS = &SD;
+    initSD();
+    //if( !initSD() ) duckyFS = &SPIFFS;
+    //else duckyFS = &SD;
   }
 
   MSC.vendorID("Pendrive");//max 8 chars
@@ -334,5 +335,6 @@ void deinitSD()
     deinitPenDrive();
   }
   SD.end();
+  duckyFS = &SPIFFS;
   WUDStatus::sd_begun = false;
 }

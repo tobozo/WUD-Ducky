@@ -31,11 +31,19 @@
 
 namespace WebUI
 {
-  void getSystemInfo( String *output, bool html = true );
+  enum output_format
+  {
+    SYSINFO_HTML,
+    SYSINFO_TXT,
+    SYSINFO_JSON
+  };
+  void getSystemInfo( String *output, output_format format );
+  void getSystemInfoJSON( String *output );
   void getSystemInfoHTML( String *output );
   void getSystemInfoTXT( String *output );
   void ls( String *output );
   void getLogs( String *output );
+  void getIndexPage( String *output );
   void fileToJson( fs::File *file, String &output );
   void staticFilesToJson( String &output );
   void lsJson( const char* path, String &output );

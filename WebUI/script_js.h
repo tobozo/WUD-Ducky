@@ -29,14 +29,11 @@
 const char* script_js = R"ScriptJS(
 
 
-const sdBtn     = document.querySelector('#fs-sd');
-const spiffsBtn = document.querySelector('#fs-spiffs');
 const mainDiv   = document.querySelector('div.main');
 const filesList = document.querySelector('#cont-files');
-const fsTab     = document.querySelector('#filesystem-tab');
+const sdCardIconSVG = `<svg fill="white"><path d="M18 2h-8L4.02 8 4 20c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-6 6h-2V4h2v4zm3 0h-2V4h2v4zm3 0h-2V4h2v4z" /></svg>`
 
 let isReadOnlyFS = false;
-
 
 function loadLogs()
 {
@@ -47,7 +44,8 @@ function loadLogs()
       const cont = document.querySelector('#logs');
       cont.innerText = '';
       res.forEach(str => {
-        cont.innerText += str + "\n";
+        cont.innerText += str;
+        cont.innerHTML += '<br>';
       });
     };
   };
@@ -61,9 +59,7 @@ function changeFS( newfs )
   const xh = new XMLHttpRequest();
   xh.onreadystatechange = () => {
     if (xh.readyState == 4 && xh.status == 200) {
-      console.log("will reload page");
       loadPage("/");
-      //document.location.reload();
     };
   };
   xh.open("GET", "/changefs?fs="+newfs, true);
@@ -72,21 +68,46 @@ function changeFS( newfs )
 
 
 
-function onFSBtnClick( btn )
+function UIselectFS( selectedFS )
 {
-  if( !btn.className.match(/enabled/) ) {
-    changeFS( btn.dataset.name );
+  console.log("selecting fs: ", selectedFS );
+  switch( selectedFS ) {
+    case 'spiffs': document.body.classList.remove("nodelete"); break;
+    case 'sd': document.body.classList.add("nodelete"); break;
   }
 }
+
+
+
+function onFSRadioClick(selectedRadio)
+{
+  if( !selectedRadio.checked ) {
+    console.log("filesystem already selected");
+    return;
+  }
+  const selectedFS = selectedRadio.dataset.fs;
+  if( selectedFS ) {
+    UIselectFS( selectedFS );
+    if( !document.body.classList.contains(selectedFS) ) {
+      changeFS( selectedFS );
+    }
+  } else {
+    console.error("target radio has no fs dataset");
+  }
+}
+
 
 
 function setpath()
 {
   const default_path = document.getElementById("newfile").files[0].name;
   document.getElementById("filepath").value = default_path;
+
   if( default_path ) {
     // show upload button
-    document.getElementById("upload").style.display = 'inline-block';
+    document.getElementById("uploader-tab").style.display = 'block';
+    document.getElementById("upload").style.display = 'block';
+    document.getElementById("upload").dataset["path"] = default_path;
   }
 }
 
@@ -119,8 +140,6 @@ function upload()
 {
   const filePath = document.getElementById("filepath").value;
   const fileInput = document.getElementById("newfile").files;
-  /* Max size of an individual file. Make sure this
-    * value is same as that set in file_server.c */
   const MAX_FILE_SIZE = 20*1024*1024;
   const MAX_FILE_SIZE_STR = "20MB";
 
@@ -182,8 +201,7 @@ function editFile( path )
 {
   mainDiv.innerHTML += `<div class="text-editor"><div>Editing <b>${path}</b></div><textarea id=editor></textarea><button id="save" onclick=saveFile("${path}")>Save</button><button id="cancel" onclick=closeEditor()>Cancel</button></div>`;
   fetch(path).then(async(response) => {
-    // status 404 or 500 will set ok to false
-    if (response.ok) {
+    if (response.ok) { // status 404 or 500 will set ok to false
       editor.value = await response.text();
     } else {
       closeEditor();
@@ -196,14 +214,8 @@ function editFile( path )
 
 function runPayload( path )
 {
-  //const xh = xmlHttpReq();
-  //const formData = new FormData();
-  //formData.append("file", path);
-  //xh.open("GET", "/runpayload?file="+encodeURI(path) );
-  //xh.send();
   fetch("/runpayload?file="+encodeURI(path)).then(async(response) => {
-    // status 404 or 500 will set ok to false
-    if (response.ok) {
+    if (response.ok) { // status 404 or 500 will set ok to false
       // yay !
     } else {
       throw new Error(response.status + " Failed Fetch ");
@@ -235,18 +247,26 @@ function loadPage(dirpath) {
       if (xh.readyState == 4 && xh.status == 200) {
         const res = JSON.parse(xh.responseText);
         if( res ) {
-          if( fsTab ) {
-            if( res.filesystem ) {
-              switch( res.filesystem ) {
-                case 'spiffs': isReadOnlyFS = false; sdBtn.classList.remove('enabled'); spiffsBtn.classList.add('enabled'); mainDiv.classList.remove("nodelete"); break;
-                case 'sd': isReadOnlyFS = true; spiffsBtn.classList.remove('enabled'); sdBtn.classList.add('enabled'); mainDiv.classList.add("nodelete"); break;
-                default: isReadOnlyFS = true;
-              }
-              sdBtn.onclick     = () => { onFSBtnClick(sdBtn) };
-              spiffsBtn.onclick = () => { onFSBtnClick(spiffsBtn) };
-              isReadOnlyFS ? filesList.classList.add('read-only') : filesList.classList.remove('read-only');
-            } else fsTab.innerHTML = "No filesystem info in JSON";
-          } else document.body.innerHTML += "Can't find filesystem-tab div";
+
+          if( res.filesystem ) {
+            switch( res.filesystem ) {
+              case 'spiffs': isReadOnlyFS = false; document.body.classList.remove("nodelete"); break;
+              case 'sd':     isReadOnlyFS = true;  document.body.classList.add("nodelete");    break;
+              default: isReadOnlyFS = true;
+            }
+            document.body.classList.remove("spiffs");
+            document.body.classList.remove("sd");
+            document.body.classList.add( res.filesystem );
+
+            const selectedRadio = document.querySelector('[name="fs-switcher"]:checked');
+            const selectedFS = selectedRadio.dataset.fs;
+            if( !document.body.classList.contains(selectedFS) ) {
+              selectedRadio.onclick();
+            }
+
+            isReadOnlyFS ? filesList.classList.add('read-only') : filesList.classList.remove('read-only');
+          } else fsTab.innerHTML = "No filesystem info in JSON";
+
           if( filesList ) {
             const tableHeaders = {
               "name":`<dt class="th file-name">Name</dt>`,
@@ -275,7 +295,7 @@ function loadPage(dirpath) {
               const linkEvt   = ` onclick="loadPage(location.pathname+this.href);return false;" `
               const linkCell  = `<a href="${encodeURI(elem.name)}" ${elem.type == 'file' ? '' : linkEvt}>${elem.name.substring(1)}</a>`;
               // used to toggle compact/detailed item view with css rules
-              const adjView   = `<label class="item-expander" for="toggler-${pos}">@</label><input class="item-expander" id="toggler-${pos}" type="checkbox">`;
+              const adjView   = `<input class="item-expander" id="toggler-${pos}" type="checkbox"><label class="item-expander" for="toggler-${pos}">⋯</label>`;
               let actions     = `${runCell}${editCell}${delCell}`;
               let hasActions  = !(actions === '');
 
@@ -296,7 +316,6 @@ function loadPage(dirpath) {
             });
           } else document.body.innerHTML += "No file list container";
         } else document.body.innerHTML += "JSON PARSING FAILED";
-        loadLogs();
       };
     };
     xh.open("GET", "/list?dir=" + dir, true);

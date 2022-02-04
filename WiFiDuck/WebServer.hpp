@@ -31,7 +31,7 @@
 #include <WiFiClient.h>
 #include <WiFiAP.h>
 #include <WebServer.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 //#include "WebUI.hpp" // IDE editable web files (can be overriden by spiffs but this is slower)
 
 

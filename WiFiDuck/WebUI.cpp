@@ -34,7 +34,6 @@
 #include "../WebUI/script_js.h"
 #include "../WebUI/disclaimer_html.h"
 #include "../WebUI/credits_html.h"
-#include "../WebUI/templates/info_html.h"
 #include "../WebUI/templates/info_txt.h"
 #include "../WebUI/templates/template_html.h"
 
@@ -43,7 +42,7 @@
 #include "../logger.h"
 
 #include <WiFi.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include <ArduinoJson.h>
 
 extern fs::FS* duckyFS;
@@ -55,8 +54,10 @@ namespace WebUI
 
   DynamicWebContent DynamicDocuments[] =
   {
-    {"info",            contentTypeHtml, getSystemInfoHTML },
+    {"info",            contentTypeHtml, getSystemInfoTXT },
     {"info.json",       contentTypeJson, getSystemInfoJSON },
+    {"help",            contentTypeHtml, getHelpItemsTXT },
+    {"help.json",       contentTypeJson, getHelpItemsJSON },
     {"list",            contentTypeHtml, ls },
     {"logs",            contentTypeText, getLogs },
     {"index.html",      contentTypeHtml, getIndexPage },
@@ -85,6 +86,18 @@ namespace WebUI
         // last char was a closing bracket, insert comma
         output += ',';
       }
+
+
+
+      StaticJsonDocument<128> fileInfoDoc;
+      fileInfoDoc["name"]     = String(path);
+      fileInfoDoc["type"]     = (is_dir) ? "dir" : "file";
+      fileInfoDoc["size"]     = size;
+
+      fileInfoDoc["readonly"] = (readonly) ? true : false;
+      serializeJson(fileInfoDoc, output);
+
+/*
       output += "{\"type\":\"";
       output += (is_dir) ? "dir" : "file";
       output += "\",\"name\":\"";
@@ -94,6 +107,7 @@ namespace WebUI
       output += ",\"readonly\":";
       output += (readonly) ? "true" : "false";
       output += "}";
+*/
     }
   };
 
@@ -203,11 +217,10 @@ namespace WebUI
 
     size_t markers_count =  sizeof(tplvalues)/sizeof(Poil);
 
-    if( format == SYSINFO_HTML || format == SYSINFO_TXT ) {
+    if( format == SYSINFO_TXT ) {
       Poils barbe = { tplvalues, markers_count };
       Moustache moustache;
-      if( format == SYSINFO_HTML == true ) moustache.set( info_html, output, &barbe );
-      else moustache.set( info_txt, output, &barbe );
+      moustache.set( info_txt, output, &barbe );
       moustache.parse();
     } else {
       // SYSINFO_JSON
@@ -215,37 +228,85 @@ namespace WebUI
       for( int i=0; i<markers_count; i++ ) {
         sysInfoDoc[tplvalues[i].name] = tplvalues[i].value;
       }
-      serializeJsonPretty(sysInfoDoc, *output);
+      //serializeJsonPretty(sysInfoDoc, *output);
+      serializeJson(sysInfoDoc, *output);
     }
   }
 
 
-  void getSystemInfoJSON( String *output )
-  {
-    getSystemInfo( output, SYSINFO_JSON );
-  }
+  void getSystemInfoTXT( String *output )  { getSystemInfo( output, SYSINFO_TXT ); }
+  void getSystemInfoJSON( String *output ) { getSystemInfo( output, SYSINFO_JSON ); }
 
-
-  void getSystemInfoHTML( String *output )
-  {
-    getSystemInfo( output, SYSINFO_HTML );
-  }
-
-
-  void getSystemInfoTXT( String *output )
-  {
-    getSystemInfo( output, SYSINFO_TXT );
-  }
 
   void getIndexPage( String *output )
   {
     if( WUDStatus::disclaimer_done ) {
-      *output = String( index_html );
+      *output += String( index_html );
     } else {
-      *output = String( disclaimer_html );
+      *output += String( disclaimer_html );
       WUDStatus::disclaimer_done = true;
     }
   }
+
+
+
+  void getHelpItems( String *output, output_format format )
+  {
+    using namespace duckparser;
+    #define TITLE_NAMEDKEYS "Legacy WiFiDuck named keys"
+    #define TITLE_LEGACYCMD "Legacy WiFiDuck commands"
+    #define TITLE_ESPWUDCMD "WUD Ducky commands"
+    if( !WUDStatus::usbserial_begun ) return;
+
+    String mc = ""; // macro separator
+
+    switch( format ) {
+      case SYSINFO_TXT:
+        *output += mc + TITLE_NAMEDKEYS+ ":\n";
+        for( int i=0;i<keys->count;i++ ) {
+          if( i%8==0 ) *output += "\n"; // USBSerial.println();
+          *output += " " + String(keys->commands[i].name);
+        }
+        *output += "\n\n";
+        *output += mc + TITLE_LEGACYCMD + ":\n";
+        *output += "  - REM\n";
+        *output += "  - STRING\n";
+        for( int i=0;i<legacy_commands->count;i++ ) {
+          *output += "  - " + String( legacy_commands->commands[i].name ) + "\n";
+        }
+        *output += "\n";
+        *output += mc + TITLE_ESPWUDCMD + ":\n";
+        for( int i=0;i<custom_commands->count;i++ ) {
+          *output += "  - " + String( custom_commands->commands[i].name ) + "\n";
+        }
+        *output += "\n";
+        break;
+      case SYSINFO_JSON:
+        StaticJsonDocument<2048> duckyCommandsDoc;
+        JsonArray legacynk  = duckyCommandsDoc.createNestedArray("legacy-named-keys");
+        JsonArray legacycmd = duckyCommandsDoc.createNestedArray("legacy-commands");
+        JsonArray wudcmd    = duckyCommandsDoc.createNestedArray("wud-commands");
+        for( int i=0;i<keys->count;i++ ) {
+          if( i%8==0 ) *output += "\n"; // USBSerial.println();
+          legacynk.add( keys->commands[i].name );
+        }
+        legacycmd.add( "REM" );
+        legacycmd.add( "STRING" );
+        for( int i=0;i<legacy_commands->count;i++ ) {
+          legacynk.add( legacy_commands->commands[i].name );
+        }
+        for( int i=0;i<custom_commands->count;i++ ) {
+          wudcmd.add( custom_commands->commands[i].name );
+        }
+        //serializeJsonPretty(duckyCommandsDoc, *output);
+        serializeJson(duckyCommandsDoc, *output);
+      break;
+    }
+  }
+
+  void getHelpItemsTXT( String *output )  { getHelpItems(output, SYSINFO_TXT ); }
+  void getHelpItemsJSON( String *output ) { getHelpItems(output, SYSINFO_JSON ); }
+
 
 
   void fileToJson( fs::File *file, String &output )
@@ -259,7 +320,7 @@ namespace WebUI
     size_t docs_count = sizeof(StaticDocuments)/sizeof(StaticWebContent);
     for( int i=0; i<docs_count; i++ ) {
       String path = "/" + String( StaticDocuments[i].basepath );
-      if( !SPIFFS.exists( path ) ) { // already listed and editable
+      if( !LittleFS.exists( path ) ) { // already listed and editable
         FileDescriptor fDesc = { false, path.c_str(), strlen(StaticDocuments[i].content), true };
         fDesc.toJson( output );
       }
@@ -270,10 +331,10 @@ namespace WebUI
   {
     fs::File root = duckyFS->open(path);
 
-    String fsname = duckyFS==&SPIFFS ? "spiffs" : "sd";
+    String fsname = duckyFS==&LittleFS ? "spiffs" : "sd";
 
-    output = "{\"filesystem\":\""+fsname+"\", \"files\":[";
-
+    output += "{\"filesystem\":\""+fsname+"\"";
+    output +=   ",\"files\":[";
     if (root && root.isDirectory()) {
       fs::File file = root.openNextFile();
       while (file) {
@@ -281,11 +342,19 @@ namespace WebUI
         file = root.openNextFile();
       }
     }
-    if( duckyFS==&SPIFFS ) {
-      // also list files from flash memory in case those haven't been customized to SPIFFS
+    if( duckyFS==&LittleFS ) {
+      // also list files from flash memory in case those haven't been customized to LittleFS
       staticFilesToJson( output );
     }
-    output += "]}";
+    output += "]";
+
+    output += ",\"commands\":";
+    getHelpItemsJSON( &output );
+
+    output += ",\"sysinfo\":";
+    getSystemInfoJSON( &output );
+
+    output += "}";
   }
 
 

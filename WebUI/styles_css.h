@@ -28,7 +28,13 @@
 const char* styles_css  = R"StylesCSS(
 
 
+
+
 :root {
+  --body-bgcolor: #1451AE;
+  --body-textcolor: #ffffff;
+  --body-fontsize: 14px;
+
   --radio-switch-width: 13rem;
   --radio-switch-height: 2.7rem;
   --radio-switch-padding: .1rem;
@@ -64,6 +70,19 @@ const char* styles_css  = R"StylesCSS(
 }
 
 
+* { box-sizing:content-box; }
+body, h1, h2, h3, p, div { font-family: sans; }
+body { background:var(--body-bgcolor); color:var(--body-textcolor); font-size:var(--body-fontsize); margin:0; padding:0.4em; max-width:80em; margin:auto; text-shadow: 1px 1px 1px black; }
+h1, h2, h3 { text-align:center;  }
+h1 { margin: 0; }
+h3 { margin-top: 0; }
+a { color: inherit; }
+button { border-radius: 0.2rem; padding: 0.2rem 0.4rem; margin: 0 .7rem; border: 0px solid transparent; box-shadow: 1px 1px 1px black; }
+
+
+/* prevent hscrollbar appearance while animating */
+div.main { position: relative; overflow: hidden; }
+
 
 .icon {
   width: 1em;
@@ -77,16 +96,23 @@ const char* styles_css  = R"StylesCSS(
 }
 
 .icon.sdcard {
-  background-image: url("data:image/svg+xml;utf8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='white' width='24' height='24' viewBox='0 0 24 24'%3e%3cpath d='M18 2h-8L4.02 8 4 20c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-6 6h-2V4h2v4zm3 0h-2V4h2v4zm3 0h-2V4h2v4z' /%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;utf8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='white' width='24' height='24' viewBox='0 0 24 24'%3e%3cpath d='M18 2h-8L4.02 8 4 20c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-6 6h-2V4h2v4zm3 0h-2V4h2v4zm3 0h-2V4h2v4z' /%3e%3c/svg%3e")
 }
 
 .icon.spiffs {
-  background-image: url("data:image/svg+xml;utf8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='white' width='24' height='24' viewBox='0 0 24 24'%3e%3cpath d='M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z'%3e%3c/path%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;utf8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='white' width='24' height='24' viewBox='0 0 24 24'%3e%3cpath d='M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z'%3e%3c/path%3e%3c/svg%3e")
 }
 .icon.upload
 {
   background-image: url("data:image/svg+xml;utf8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='white' width='24' height='24' viewBox='0 0 24 24'%3e%3cpath d='M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z'%3e%3c/path%3e%3c/svg%3e")
 }
+
+.icon.espressif
+{
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='15%25' fill='%23ff3034'/%3E%3Cpath fill='%23fff' d='M126 120.53a188.46 188.46 0 0 0 266.53 266.52 7.69 7.69 0 1 1 10.87 10.87 203.83 203.83 0 0 1-288.26-288.26A7.69 7.69 0 0 1 126 120.53zm52.5 240.22a26 26 0 1 0 0 1M409 334a273 273 0 0 0-231.5-231.5A150 150 0 0 0 139 130v26a216 216 0 0 1 217 216h26a111 111 0 0 0 27-39M240 83l-4 12a298 298 0 0 1 181 180l11-4A172 172 0 0 0 240 83zm5 342a118 118 0 0 0-95-171 10.61 10.61 0 0 1 3-21 140 140 0 0 1 120 177l31 9 26.5-10a195 195 0 0 0-163-230 66.6 66.6 0 1 0-18 131.5 63 63 0 0 1 42 95.5l21 14z'/%3E%3C/svg%3E");
+}
+
+
 
 
 .radio-switch {
@@ -144,12 +170,6 @@ input[data-fs="sd"]+label, input[data-fs="spiffs"]+label {
 }
 
 
-.explorer label[for="newfile"] {
-  user-select: none;
-  background-size: auto 100%;
-  width: 1.8em;
-  height: 1.8em;
-}
 
 nav {
   width: 100%;
@@ -158,30 +178,11 @@ nav {
   z-index: 10000;
 }
 
-nav label[for="newfile"] {
-  position: absolute;
-  left: 3em;
-  top: 0.4em;
-}
+
 
 
 .sr-only { display:none; }
 
-
-body, h1, h2, h3, p, div { font-family: sans; }
-body { background:#1451AE; color:#ffffff; font-size:14px; margin:0; padding:0.4em; max-width:80em; margin:auto; text-shadow: 1px 1px 1px black; }
-h1, h2, h3 { text-align:center;  }
-h1 { margin: 0; }
-h3 { margin-top: 0; }
-a { color: inherit; }
-button { border-radius: 0.2rem; padding: 0.2rem 0.4rem; margin: 0 .7rem; border: 0px solid transparent; box-shadow: 1px 1px 1px black; }
-
-
-
-
-:root {
-
-}
 
 .explorer .action-button { margin: 0; padding: 0; width: 1.8em; height: 1.8em; line-height: .1em; font-size: 1em; }
 .explorer dd .action-button {  width: var(--action-button-width); margin-right: 1em; }
@@ -211,7 +212,7 @@ button { border-radius: 0.2rem; padding: 0.2rem 0.4rem; margin: 0 .7rem; border:
 .explorer .tr.tbody dd.file-action { display: var(--file-action-display); }
 .explorer .tr.thead dt.file-action { display: var(--file-action-display); }
 
-.explorer dd > span {  margin-right: .5rem; }
+.explorer dd > span {  margin: 0 .5rem 0.5rem 0; }
 
 .explorer dd, .explorer dt { grid-row-start: var(--grid-row-start); /* reset, next column */ }
 
@@ -238,6 +239,8 @@ This query will take effect for any screen smaller than 760px
 and also iPads specifically.
 */
 @media  only screen and (max-width: 760px), (min-device-width: 768px) and (max-device-width: 1024px)  {
+  /* prevent double-tap from selecting non tabular text */
+  body, h1, h2, h3, p, div { user-select:none; }
 
   :root {
     --header-visibility: hidden;
@@ -282,22 +285,93 @@ and also iPads specifically.
 
 }
 
-/* general rules */
-.explorer #quack, .info #info { display:none; }
-#info, #quack { position: absolute; left: 0.4em;  top: 0.4em; }
-#reload { position: absolute; right: 3em;  top: 0.4em; }
-#settings { position: absolute; right: 0.4em;  top: 0.4em; }
+
+nav label[for="newfile"] { position: absolute; left: 2.5rem; top: 0.4rem; width: 1.8em; height: 1.8em; }
+#info { position: absolute; left: 0.4rem;  top: 0.4rem; }
+#reload { position: absolute; right: 2.5rem;  top: 0.4rem; }
+#settings { position: absolute; right: 0.4rem;  top: 0.4rem; }
 .overflow-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+
+/* quack form */
+.quacker-tab {
+  position: fixed;
+  bottom: 0px;
+  background: var(--body-bgcolor);
+  padding: 1em;
+  width: 100%;
+  max-width: 80em;
+  box-sizing: border-box;
+  border-top: .3em solid rgba(255,255,255,.7);
+  z-index: 10000;
+}
+.quacker-tab #quackinput {
+  border-radius: .5em;
+  border-color: transparent;
+  width: 16rem;
+}
+label[for="quackinput"] {
+  display:block;
+  padding: 0.2rem;
+}
+
 
 /* file explorer */
 
 #uploader-tab { transition: transform 0.3s ease-out; }
 #control-panel { text-align:center; }
-#control-panel { background: rgba(255,255,255,.15); margin: .5rem 0; border-radius: .5rem; padding: 1.3em .7rem; transition: transform 0.3s linear, top 0.2s; }
-label[for="control-panel-toggle"] {
-  padding: 0.2em .5em;
+#control-panel { background: rgba(255,255,255,.15); margin: .5rem 0; border-radius: .5rem; padding: 1.3em .7rem; }
+
+/* make the label fit inside the button */
+label[for="infos-panel-toggle"],
+label[for="control-panel-toggle"],
+label[for="no-reload-checkbox"] {
+  position: relative;
+  display: block;
+  background-color: inherit;
+  width: 100%;
+  height: 100%;
+  color: transparent;
+  overflow: hidden;
 }
-input#control-panel-toggle:not(:checked) ~ * #control-panel, input#control-panel-toggle:checked ~ * .files-view  {
+label[for="control-panel-toggle"]::before,
+label[for="infos-panel-toggle"]::before,
+label[for="no-reload-checkbox"]::before {
+  position: absolute;
+  display: block;
+  color: black;
+  width: 1.8em;
+  height: 1.8em;
+  box-sizing: border-box;
+  overflow: hidden;
+  line-height: 1.8em;
+
+  font-size: 1.3rem;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+}
+label[for="control-panel-toggle"]::before {
+  content: "⚙";
+}
+label[for="infos-panel-toggle"]::before {
+  content: "ℹ️";
+}
+label[for="no-reload-checkbox"]::before {
+  content: "🔃";
+}
+
+/* div rules to hide 'other' divs */
+
+/* hide self when option not checked */
+input#control-panel-toggle:not(:checked) ~ * #control-panel,
+input#infos-panel-toggle:not(:checked) ~ * .infos,
+/* hide other when self is checked */
+input#control-panel-toggle:checked ~ * .infos,
+input#control-panel-toggle:checked ~ * .files-view,
+input#infos-panel-toggle:checked ~ * .files-view,
+input#infos-panel-toggle:checked ~ * #control-panel
+{
   outline: 2px solid white;
   transform: scale(100%,0) translate(0, 0 );
   position: absolute;
@@ -308,9 +382,30 @@ input#control-panel-toggle:not(:checked) ~ * #control-panel, input#control-panel
   border: 0;
 }
 
-.explorer .files-view {
+/* nav buttons rules */
+input#infos-panel-toggle:checked ~ * #settings,
+input#infos-panel-toggle:checked ~ * #reload,
+input#infos-panel-toggle:checked ~ * label[for="newfile"],
+input#control-panel-toggle:checked ~ * #info,
+input#control-panel-toggle:checked ~ * #reload,
+input#control-panel-toggle:checked ~ * label[for="newfile"]
+{
+  pointer-events: none;
+  opacity:0.5;
+}
+
+
+input#control-panel-toggle:checked ~ * label[for="control-panel-toggle"]::before,
+input#infos-panel-toggle:checked ~ * label[for="infos-panel-toggle"]::before
+{
+  content: "🔙";
+}
+
+
+.files-view, .infos, #control-panel {
   transition: transform 0.3s linear, top 0.2s;
   opacity: 1;
+  margin-bottom: 12em;
 }
 
 .explorer button.clear-logs-button { position: absolute; transform: translate(0, -110%); right: 0; }
@@ -325,12 +420,12 @@ input#control-panel-toggle:not(:checked) ~ * #control-panel, input#control-panel
   display: none;
   width: 32em;
   max-width: calc( 100vw - 2em );
+  position:relative;
 }
 
 #upload::after {
   content: attr(data-path);
-  width: 90vw;
-  display: iblock;
+  width: 100%;
   text-overflow: ellipsis;
   overflow-x: hidden;
   display: block;
@@ -378,19 +473,48 @@ input#control-panel-toggle:not(:checked) ~ * #control-panel, input#control-panel
 .fixed { margin: 0 auto; position: relative; }
 
 /* system information */
-.info .action-button { margin: 0; padding: 0; width: 1.8em; height: 1.8em; line-height: .1em; font-size: 1em; }
-.info dl { display: table; width:100%;  }
-.info dl > div { display: table-row; width:100%; }
-.info dl > div > dt, .info dl > div > dd { display: table-cell; padding: 0.25em; height:auto; word-break: break-word; }
-.info dl > div > dt { width: 50%; font-weight: bold; text-align:right; }
-.info dl > div > dd { width: auto; }
-.info dl > div > dt::after { content:":"; display:inline-block;padding-left: 0.25em; height:100%; }
+.infos .action-button { margin: 0; padding: 0; width: 1.8em; height: 1.8em; line-height: .1em; font-size: 1em; }
+.infos dl { display: table; width:100%;  }
+.infos dl > div { display: table-row; width:100%; }
+.infos dl > div > dt, .infos dl > div > dd { display: table-cell; padding: 0.25em; height:auto; word-break: break-word; }
+.infos dl > div > dt { width: 50%; font-weight: bold; text-align:right; }
+.infos dl > div > dd { width: auto; }
+.infos dl > div > dt::after { content:":"; display:inline-block;padding-left: 0.25em; height:100%; }
 .infos { background: rgba(255,255,255,0.15); padding: 0.3rem 0; }
 .infos h2 { background: rgba(0,0,0,0.25); }
 .infos dl { background: rgba(255,255,255,.15); padding: 0.3rem 0; }
 .infos .started, .infos .online { color: green; animation: glow 2s infinite alternate; }
 .infos .enabled, .infos .on { color: lightgreen; }
 .infos .stopped, .infos .disabled { color: darkred; }
+
+.infos .icon.espressif {
+  padding: 0;
+  margin: .5em .5em 0 0;
+  width: 100%;
+  height: 1.5em;
+  display: inline-block;
+  text-indent: 2em;
+  background-position: left;
+}
+
+.infos span[data-status]::after {
+  content: " " attr(class);
+  color: white;
+  text-transform: capitalize;
+  padding-left: 0.5em;
+}
+
+.infos .kbd span[data-status] {
+  display:inline-block;
+  width: 100%;
+  line-height: 2.5em;
+}
+
+.infos .kbd span[data-status]::after {
+  white-space: pre;
+}
+
+
 @keyframes glow {
   from {
     color: green;
@@ -400,7 +524,9 @@ input#control-panel-toggle:not(:checked) ~ * #control-panel, input#control-panel
   }
 }
 
-.key__button {
+/* css keyboard buttons for "capslock", "numlock" and "scrolllock" */
+
+.infos .key__button {
   width: 2rem;
   height: 2rem;
   line-height: 2rem;
@@ -419,7 +545,7 @@ input#control-panel-toggle:not(:checked) ~ * #control-panel, input#control-panel
   display: inline-block;
   box-shadow: 0 0 1px #888,0 1px 0 #fff, 0 6px 0 #C0C0C0, 0 8px 17px rgba(#444, 0.4), 2px 1px 4px rgba(#444, 0.25), -2px 1px 4px rgba(#444, 0.25), 0 9px 16px rgba(#444, 0.1);
 }
-.key__button.on {
+.infos .key__button.on {
   animation: glow 2s infinite alternate;
   background: -webkit-linear-gradient(top, #666 0%, #555 80%, #333 100%);
   border-color: #666;
@@ -431,8 +557,6 @@ body.credits { padding: 1rem }
 
 /* disclaimer page */
 body.disclaimer { padding: 1rem }
-
-
 
 
 )StylesCSS";

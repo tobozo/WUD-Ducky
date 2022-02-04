@@ -30,10 +30,74 @@ const char* script_js = R"ScriptJS(
 
 
 const mainDiv   = document.querySelector('div.main');
-const filesList = document.querySelector('#cont-files');
-const sdCardIconSVG = `<svg fill="white"><path d="M18 2h-8L4.02 8 4 20c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-6 6h-2V4h2v4zm3 0h-2V4h2v4zm3 0h-2V4h2v4z" /></svg>`
+const infoDiv   = document.querySelector('.infos');
+const filesList = document.getElementById('cont-files');
+const infoTpl   = document.getElementById('infos-template');
 
+
+let logsEnabled =  document.querySelector('[name="logs-switcher"]:checked').dataset["logs"] === "on";
 let isReadOnlyFS = false;
+let sysinfo      = {};
+
+
+
+function tplparse( tpl, domtarget, markers )
+{
+  const initialdisplay = domtarget.style.display;
+  domtarget.style.display = 'none';
+  domtarget.innerHTML = tpl.innerHTML;
+
+  Object.entries(markers).forEach(([key, value]) => {
+    //console.log(`${key} ${value}`);
+    rx = new RegExp('{{' + key +'}}', 'g');
+    domtarget.innerHTML = domtarget.innerHTML.replace(rx, value );
+  });
+  domtarget.style.display = initialdisplay;
+}
+
+
+function showInfo()
+{
+  tplparse( infoTpl, infoDiv, sysinfo);
+  infoDiv.style.display = 'block';
+  infoDiv.focus();
+}
+
+
+
+function quack( msg, onsuccess, onerror )
+{
+  const url = "/quack?cmd="+encodeURI(msg);
+  fetch(url).then(async(response) => {
+    if (response.ok) { // status 404 or 500 will set "ok" property to false
+      if( onsuccess ) onsuccess();
+    } else {
+      if( onerror ) onerror();
+      throw new Error(response.status + " Failed Fetch ");
+    }
+  }).catch(e => console.error('DUH!', e))
+}
+
+
+function setLogs( target )
+{
+  const targetEnable = target.dataset["logs"] === "on";
+  if( targetEnable != logsEnabled ) {
+    document.querySelector(".logs-viewer").style.display = targetEnable ? 'block' : 'none';
+    switch( targetEnable ) {
+      case true: quack("logs-enable",  () => logsEnabled = true ); break;
+      case false:quack("logs-disable", () => logsEnabled = false ); break;
+    }
+  } else console.log("no change");
+}
+
+
+function clearLogs()
+{
+  quack("logs-clear");
+  document.getElementById("logs").innerHTML = '';
+}
+
 
 function loadLogs()
 {
@@ -267,6 +331,40 @@ function loadPage(dirpath) {
             isReadOnlyFS ? filesList.classList.add('read-only') : filesList.classList.remove('read-only');
           } else fsTab.innerHTML = "No filesystem info in JSON";
 
+          // set the control panel "logging enabled" radio state
+          if( res.sysinfo ) {
+            sysinfo = res.sysinfo;
+            if( res.sysinfo.logging_enabled ) {
+              logsEnabled = ( res.sysinfo.logging_enabled === "enabled" );
+              document.querySelector(".logs-viewer").style.display = logsEnabled ? 'block' : 'none';
+              if( logsEnabled ) document.querySelector('[name="logs-switcher"][data-logs="on"]').click();
+              else  document.querySelector('[name="logs-switcher"][data-logs="off"]').click();
+            }
+            if( document.querySelector('input#infos-panel-toggle').checked ) {
+              showInfo();
+            }
+          }
+
+          if( res.commands ) {
+            console.log( res.commands );
+            const duckyOptions = document.getElementById("ducky-commands");
+            duckyOptions.innerHTML = '';
+
+            Object.entries( res.commands ).forEach(([key, value]) => {
+              console.log(value);
+              value.forEach( function( cmd ) {
+                duckyOptions.innerHTML += `<option value="${cmd}">`;
+              });
+            });
+            /*
+            res.commands.forEach( function( cmdset ) {
+              cmdset.forEach( function( cmd ) {
+                duckyOptions.innerHTML += `<option value="${cmd}">`;
+              });
+            });*/
+          }
+
+
           if( filesList ) {
             const tableHeaders = {
               "name":`<dt class="th file-name">Name</dt>`,
@@ -289,7 +387,7 @@ function loadPage(dirpath) {
               const runCell   = isQuackFile ? `<button class="action-button" onclick=runPayload("${encodeURI(elem.name)}")>⏻<span>Run</span></button>` : '';
               const delCell   = (isReadOnlyFS || !isWritable) ? '' : `<button type="submit" class="action-button" onclick="deleteFile('${encodeURI(elem.name)}')">❌<span>Delete</span></button>`;
               const editCell  = isReadOnlyFS ? '' : isplaintext ? `<button type="submit" class="action-button" onclick="editFile('${encodeURI(elem.name)}')">🖉<span>Edit</span></button>` : '';
-              const typeCell  = elem.type == 'dir' ? '📁' : isQuackFile ? '🦆' : '🗎';
+              const typeCell  = elem.type == 'dir' ? '📁' : isQuackFile ? '🦆' : '📜';
               const typeTitle = isQuackFile ? 'Payload' : elem.type;
               const sizeCell  = formatBytes( elem.size );
               const linkEvt   = ` onclick="loadPage(location.pathname+this.href);return false;" `

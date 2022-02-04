@@ -65,13 +65,19 @@ void serialprintln(String msg)
 void SystemInfo()
 {
   String sysInfo;
-  WebUI::getSystemInfo( &sysInfo, WebUI::SYSINFO_TXT );
+  WebUI::getSystemInfoTXT( &sysInfo );
   USBSerial.println( sysInfo );
+  sysInfo = String();
 }
 
 
 void SerialPrintHelp()
 {
+  String output;
+  WebUI::getHelpItemsTXT( &output );
+  USBSerial.println(output);
+  output = String();
+  /*
   using namespace duckparser;
   if( !WUDStatus::usbserial_begun ) return;
   USBSerial.println("Legacy WiFiDuck named keys:");
@@ -93,6 +99,7 @@ void SerialPrintHelp()
   }
   USBSerial.println();
   return;
+  */
 }
 
 
@@ -225,19 +232,19 @@ void StopWiFiSTA()
 
 
 
-void InitSPIFFS()
+void InitLittleFS()
 {
-  if( !SPIFFS.begin() ) {
-    Logger::logmsg("SPIFFS failed!");
+  if( !LittleFS.begin() ) {
+    Logger::logmsg("LittleFS failed!");
     return;
   }
-  duckyFS = &SPIFFS;
+  duckyFS = &LittleFS;
   WUDStatus::spiffs_begun = true;
 }
 
 void InitSD()
 {
-  if( !initSD() ) duckyFS = &SPIFFS;
+  if( !initSD() ) duckyFS = &LittleFS;
   //else duckyFS = &SD;
 }
 
@@ -319,7 +326,7 @@ duckCommand WUDDuckCommands[] =
   { "SetPassword_STA",   SetPassword_STA,                      true  },
 
 
-  { "InitSPIFFS",        InitSPIFFS,                           false },
+  { "InitLittleFS",        InitLittleFS,                           false },
   { "InitSD",            InitSD,                               false },
   { "InitMouse",         InitMouse,                            false },
   { "InitKeyboard",      InitKeyboard,                         false },
@@ -331,6 +338,7 @@ duckCommand WUDDuckCommands[] =
   { "logs",              [](){ Logger::printdmesg( serialprintln ); }, false },
   { "logs-disable",      [](){ Logger::disable(); },           false },
   { "logs-enable",       [](){ Logger::enable(); },            false },
+  { "logs-clear",        [](){ Logger::clear(); },             false },
   //{"StopUSB", [](){ } },
   //{"StopWebServer", [](){  } },
   //{"SetWiFiMode", [](){  } },
@@ -392,7 +400,7 @@ void setup()
   duckparser::parse( "InitMouse" );
   duckparser::parse( "InitPenDrive" );
   duckparser::parse( "StartUSB" );
-  duckparser::parse( "InitSPIFFS" );
+  duckparser::parse( "InitLittleFS" );
   vTaskDelay(5000); // let the USB tasks finish their shift before doing critical detection stuff
   duckparser::parse( "LoadWiFiCreds" );
   duckparser::parse( "InitWiFiAP" );

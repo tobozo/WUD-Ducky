@@ -94,7 +94,7 @@ namespace WS
         filename = "/" + filename;
       }
       WebServerLogMsg("Receiving file: "+filename );
-      fsUploadFile = SPIFFS.open(filename, "w");
+      fsUploadFile = LittleFS.open(filename, "w");
       filename = String();
     } else if (upload.status == UPLOAD_FILE_WRITE) {
       if (fsUploadFile) {
@@ -116,9 +116,9 @@ namespace WS
       WebServerLogMsg("Rewriting root path to index.html");
       path = "/index.html";
     }
-    if( SPIFFS.exists( path ) ) {
+    if( LittleFS.exists( path ) ) {
       WebServerLogMsg("Serving '"+path+"' from flash filesystem");
-      fs::File file = SPIFFS.open(path.c_str());
+      fs::File file = LittleFS.open(path.c_str());
       bool streamable =  file && !file.isDirectory();
       if( streamable ) {
         server.streamFile(file, getContentType(path) );
@@ -164,11 +164,11 @@ namespace WS
     if (path == "/") {
       return server.send(500, contentTypeText, "BAD PATH");
     }
-    if (!SPIFFS.exists(path)) {
+    if (!LittleFS.exists(path)) {
       String responseText = "File Not Found: " + String( server.uri() );
       return server.send(404, contentTypeText, responseText);
     }
-    SPIFFS.remove(path);
+    LittleFS.remove(path);
     WebServerLogMsg("File "+path+" deleted successfully");
     server.sendHeader("Location", String("/"), true);
     server.send(302, contentTypeText, "");
@@ -250,7 +250,7 @@ namespace WS
     String response = "Filesystem changed to " + fsname + " successfully";
     int responseCode = 200;
     if( fsname == "spiffs" ) {
-      duckyFS = &SPIFFS;
+      duckyFS = &LittleFS;
   #ifdef HAS_PENDRIVE
     } else  if( fsname == "sd" ) {
       duckyFS = &SD;
@@ -283,8 +283,8 @@ namespace WS
       }
     });
 
-    // serving static files from SPIFFS is fucked up and unregisters all the other handlers
-    // server.serveStatic("/", SPIFFS, "/" );
+    // serving static files from LittleFS is fucked up and unregisters all the other handlers
+    // server.serveStatic("/", LittleFS, "/" );
 
     // action endpoints with status response
     server.on("/changefs", HTTP_GET, handleChangeFS );

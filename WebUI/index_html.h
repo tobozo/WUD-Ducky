@@ -51,11 +51,11 @@ const char* index_html = R"indexHTML(
 <body class="explorer nodelete">
   <audio autoplay src="/Quack.wav"></audio>
   <input type="checkbox" id="control-panel-toggle" style="display: none;">
+  <input type="checkbox" id="infos-panel-toggle" style="display: none;">
   <nav>
-    <button id="reload" class="action-button" onClick="history.go(0)">🗘</button>
-    <button id="info" class="action-button" onClick="top.location='/info'">🛈</button>
-    <button id="quack" class="action-button" onClick="top.location='/'">🦆</button>
-    <label for="newfile" class="action-button action-button icon upload"></label>
+    <button id="reload" class="action-button" onClick="history.go(0)"><label for="no-reload-checkbox">🔃</label></button>
+    <button id="info" class="action-button" onClick="showInfo();"><label for="infos-panel-toggle">🛈</label></button>
+    <label for="newfile" class="action-button icon upload"></label>
     <button id="settings" class="action-button"><label for="control-panel-toggle">⚙</label></button>
   </nav>
   <div class="main">
@@ -79,22 +79,22 @@ const char* index_html = R"indexHTML(
         <h2>Logging</h2>
         <ul class="radio-switch">
           <li class="radio-switch__item">
-            <input type="radio" class="radio-switch__input sr-only" id="log1" name="logs-switcher" data-logs="on" checked>
+            <input type="radio" class="radio-switch__input sr-only" id="log1" name="logs-switcher" data-logs="on" checked onclick="setLogs(this)">
             <label for="log1" class="radio-switch__label"></svg>ON</label>
           </li>
 
           <li class="radio-switch__item">
-            <input type="radio" class="radio-switch__input sr-only" id="log2" name="logs-switcher" data-logs="off">
+            <input type="radio" class="radio-switch__input sr-only" id="log2" name="logs-switcher" data-logs="off" onclick="setLogs(this)">
             <label for="log2" class="radio-switch__label">OFF</label>
             <div class="radio-switch__marker" aria-hidden="true"></div>
           </li>
         </ul>
 
-        <div>
+        <div class="logs-viewer">
           <input class="toggle-button" type="checkbox" id="view-logs-toggler" onclick="if(checked) loadLogs()">
-          <label for="view-logs-toggler" class="">🗎 View logs</label>
+          <label for="view-logs-toggler" class="">📜 View logs</label>
           <div id="filesystemlogs">
-            <button class="clear-logs-button">Clear logs</button>
+            <button class="clear-logs-button" onclick="clearLogs()">Clear logs</button>
             <div id="logs" style="white-space:pre"></div>
           </div>
         </div>
@@ -108,6 +108,19 @@ const char* index_html = R"indexHTML(
       <button id="upload" type="button" onclick="upload()">Upload</button>
     </div>
 
+    <div class="quacker-tab">
+      <!--
+      <input id="quackinput" type="text">
+      <button onclick="quack(quackinput.value);quackinput.value=''">Quack!</button>
+      -->
+      <label for="quackinput">Who let the ducks out?</label>
+      <input list="ducky-commands" id="quackinput" name="quackinput" />
+      <button id="quack" onclick="quack(quackinput.value);quackinput.value=''">Quack!</button>
+
+      <datalist id="ducky-commands"><!--  <option value="Blah"> --></datalist>
+
+    </div>
+
     <div class="files-view">
       <input class="toggle-button" type="radio" name="compact-view" value="on"  id="cv1" checked>
       <input class="toggle-button" type="radio" name="compact-view" value="off" id="cv2">
@@ -115,9 +128,66 @@ const char* index_html = R"indexHTML(
         <label class="toggle-button" for="cv1">☰</label>
         <label class="toggle-button" for="cv2">☶</label>
       </div>
-      <dl class="fixed table" id="cont-files"></dl>
+      <dl class="fixed table" id="cont-files"><h3>Loading Files List...</h3></dl>
     </div>
+
+    <div class="infos"><h3>Loading Sytem Information...</h3></div>
+
   </div>
+
+  <script type="text/template" id="infos-template">
+
+      <h2>Software</h2>
+        <dl>
+          <div><dt>SDK version</dt><dd><span class="overflow-text">{{getSdkVersion}}</span></dd></div>
+          <div><dt>Chip Id</dt><dd><span class="espressif icon">{{getChipModel}}</span></dd></div>
+          <div><dt>WebServer</dt><dd><span class="{{webserver_begun}}" data-status>◉</span></dd></div>
+          <div><dt>Logging</dt><dd><span class="{{logging_enabled}}" data-status>◉</span></dd></div>
+          <div><dt>📟 Serial debug</dt><dd><span class="{{hwserial_begun}}" data-status>◉</span> ({{SerialDebug}})</dd></div>
+        </dl>
+      <h2>CPU / Flash</h2>
+        <dl>
+          <div><dt>CPU frequency</dt><dd>{{getCpuFreqMHz}} MHz</dd></div>
+          <div><dt>Flash frequency</dt><dd>{{flashFreq}} MHz</dd></div>
+          <div><dt>Flash chip Id</dt><dd>{{getFlashChipMode}}</dd></div>
+          <div><dt>Estimated Flash size</dt><dd>{{getFlashChipSize}}</dd></div>
+          <div><dt>Flash write mode</dt><dd>{{ideMode}}</dd></div>
+        </dl>
+      <h2>Sketch</h2>
+        <dl>
+          <div><dt>#️⃣ Sketch hash</dt><dd>{{getSketchMD5}}</dd></div>
+          <div><dt>📏 Sketch size</dt><dd>{{getSketchSize}}</dd></div>
+          <div><dt>🆓 Space available</dt><dd>{{getFreeSketchSpace}}</dd></div>
+        </dl>
+      <h2>Heap</h2>
+        <dl>
+          <div><dt>∑ Total</dt><dd>{{getHeapSize}}</dd></div>
+          <div><dt>🆓 Available</dt><dd>{{getFreeHeap}}</dd></div>
+          <div><dt>🎚️ Min since boot</dt><dd>{{getMinFreeHeap}}</dd></div>
+          <div><dt>↕️ Max alloc</dt><dd>{{getMaxAllocHeap}}</dd></div>
+        </dl>
+      <h2>USB</h2>
+        <dl>
+          <div><dt>🏪  Vendor ID</dt><dd>{{USB_VID}}</dd></div>
+          <div><dt>📦  Product ID</dt><dd>{{USB_PID}}</dd></div>
+          <div><dt>🏭  Manufacturer</dt><dd>{{USB_MANUFACTURER}}</dd></div>
+          <div><dt>🏷️ Product Name</dt><dd>{{USB_PRODUCT}}</dd></div>
+          <div><dt>#️⃣  Serial Number</dt><dd>{{USB_SERIAL}}</dd></div>
+          <div><dt>✳️ HUB</dt><dd><span class="{{usb_begun}}" data-status>◉</span></dd></div>
+          <div><dt>🔘 HID</dt><dd><span class="{{hid_ready}}" data-status>◉</span></dd></div>
+          <div><dt>📟 Serial</dt><dd><span class="{{usbserial_begun}}" data-status>◉</span></dd></div>
+          <div><dt>⌨ Keyboard</dt><dd class="kbd"><span class="{{keyboard_begun}}" data-status>◉</span> <span title="Caps Lock {{capslock_on}}" class="key__button {{capslock_on}}">⇪</span><span title="Num Lock {{numlock_on}}" class="key__button {{numlock_on}}">⇭</span><span  title="Scroll Lock {{scrolllock_on}}" class="key__button {{scrolllock_on}}">⤓</span></dd></div>
+          <div><dt>🖱️ Mouse</dt><dd><span class="{{absmouse_begun}}" data-status>◉</span></dd></div>
+          <div><dt>💾 PenDrive</dt><dd><span class="{{pendrive_begun}}" data-status>◉</span></dd></div>
+        </dl>
+      <h2>Storage</h2>
+        <dl>
+          <div><dt><span class="icon sdcard {{sd_begun}}"></span> SD</dt><dd><span class="{{sd_begun}}" data-status>◉</span></dd></div>
+          <div><dt><span class="icon spiffs {{spiffs_begun}}"></span> SPIFFS</dt><dd><span class="{{spiffs_begun}}" data-status>◉</span></dd></div>
+        </dl>
+  </script>
+
+
   <script type="text/javascript" src="/script.js"></script>
 </body>
 </html>

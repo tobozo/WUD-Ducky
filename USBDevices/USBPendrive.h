@@ -31,7 +31,7 @@
 #include "USBConfig.h"
 #include "USBMSC.h"
 #include <SD.h>
-#include <SPIFFS.h>
+#include <LittleFS.h>
 #include "../WiFiDuck/led_controls.hpp"
 
 // Config SD Card
@@ -244,7 +244,7 @@ bool initPenDrive()
 
   if( !WUDStatus::sd_begun ) {
     initSD();
-    //if( !initSD() ) duckyFS = &SPIFFS;
+    //if( !initSD() ) duckyFS = &LittleFS;
     //else duckyFS = &SD;
   }
 
@@ -335,6 +335,6 @@ void deinitSD()
     deinitPenDrive();
   }
   SD.end();
-  duckyFS = &SPIFFS;
+  duckyFS = &LittleFS;
   WUDStatus::sd_begun = false;
 }

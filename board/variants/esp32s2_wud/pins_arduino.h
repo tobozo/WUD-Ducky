@@ -13,7 +13,7 @@
 
 #define USB_VID             0xcafe
 #define USB_PID             0xdeca
-#define USB_MANUFACTURER    "IGNSOC"
+#define USB_MANUFACTURER    "INGSOC"
 #define USB_PRODUCT         "WUD-Nutquacker"
 #define USB_SERIAL 			    "0xDEADB33F"
 #define USB_WEBUSB_ENABLED	false

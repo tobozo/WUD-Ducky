@@ -137,28 +137,22 @@ const char* index_html = R"indexHTML(
 
   <script type="text/template" id="infos-template">
 
-      <h2>Software</h2>
+      <h2>Firmware / CPU / Flash</h2>
         <dl>
-          <div><dt>SDK version</dt><dd><span class="overflow-text">{{getSdkVersion}}</span></dd></div>
           <div><dt>Chip Id</dt><dd><span class="espressif icon">{{getChipModel}}</span></dd></div>
-          <div><dt>WebServer</dt><dd><span class="{{webserver_begun}}" data-status>◉</span></dd></div>
-          <div><dt>Logging</dt><dd><span class="{{logging_enabled}}" data-status>◉</span></dd></div>
           <div><dt>📟 Serial debug</dt><dd><span class="{{hwserial_begun}}" data-status>◉</span> ({{SerialDebug}})</dd></div>
-        </dl>
-      <h2>CPU / Flash</h2>
-        <dl>
+          <div><dt>Logging</dt><dd><span class="{{logging_enabled}}" data-status>◉</span></dd></div>
           <div><dt>CPU frequency</dt><dd>{{getCpuFreqMHz}} MHz</dd></div>
           <div><dt>Flash frequency</dt><dd>{{flashFreq}} MHz</dd></div>
           <div><dt>Flash chip Id</dt><dd>{{getFlashChipMode}}</dd></div>
           <div><dt>Estimated Flash size</dt><dd>{{getFlashChipSize}}</dd></div>
           <div><dt>Flash write mode</dt><dd>{{ideMode}}</dd></div>
-        </dl>
-      <h2>Sketch</h2>
-        <dl>
-          <div><dt>#️⃣ Sketch hash</dt><dd>{{getSketchMD5}}</dd></div>
           <div><dt>📏 Sketch size</dt><dd>{{getSketchSize}}</dd></div>
+          <div><dt>#️⃣ Sketch hash</dt><dd>{{getSketchMD5}}</dd></div>
+          <div><dt>SDK version</dt><dd><span class="overflow-text">{{getSdkVersion}}</span></dd></div>
           <div><dt>🆓 Space available</dt><dd>{{getFreeSketchSpace}}</dd></div>
         </dl>
+
       <h2>Heap</h2>
         <dl>
           <div><dt>∑ Total</dt><dd>{{getHeapSize}}</dd></div>
@@ -166,6 +160,7 @@ const char* index_html = R"indexHTML(
           <div><dt>🎚️ Min since boot</dt><dd>{{getMinFreeHeap}}</dd></div>
           <div><dt>↕️ Max alloc</dt><dd>{{getMaxAllocHeap}}</dd></div>
         </dl>
+
       <h2>USB</h2>
         <dl>
           <div><dt>🏪  Vendor ID</dt><dd>{{USB_VID}}</dd></div>
@@ -180,6 +175,24 @@ const char* index_html = R"indexHTML(
           <div><dt>🖱️ Mouse</dt><dd><span class="{{absmouse_begun}}" data-status>◉</span></dd></div>
           <div><dt>💾 PenDrive</dt><dd><span class="{{pendrive_begun}}" data-status>◉</span></dd></div>
         </dl>
+
+
+      <h2>Network</h2>
+        <dl>
+          <div><dt>MAC Address</dt><dd>{{MAC_ADDR}}</dd></div>
+          <div><dt>STA IP Address</dt><dd>{{STA_ADDR}}</dd></div>
+          <div><dt>WebServer</dt><dd><span class="{{webserver_begun}}" data-status>◉</span></dd></div>
+          <div><dt>WiFi Access Point</dt><dd><span class="{{softap_begun}}" data-status>◉</span></dd></div>
+          <div><dt>AP SSID</dt><dd>{{AP_SSID}}</dd></div>
+          <div><dt>AP PASS</dt><dd>{{AP_PASSWORD}}</dd></div>
+          <div><dt>WiFi Station</dt><dd><span class="{{wifista_begun}}" data-status>◉</span></dd></div>
+          <div><dt>STA SSID</dt><dd>{{STA_SSID}}</dd></div>
+          <div><dt>STA PASS</dt><dd>{{STA_PASSWORD}}</dd></div>
+          <div><dt>NTP Client</dt><dd><span class="{{ntp_enabled}}" data-status>◉</span></dd></div>
+          <div><dt>NTP Zone</dt><dd>{{NTP_ZONE}}</dd></div>
+          <div><dt>NTP Server address</dt><dd>{{NTP_SERVERADDR}}</dd></div>
+        </dl>
+
       <h2>Storage</h2>
         <dl>
           <div><dt><span class="icon sdcard {{sd_begun}}"></span> SD</dt><dd><span class="{{sd_begun}}" data-status>◉</span></dd></div>

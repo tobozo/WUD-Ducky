@@ -43,6 +43,7 @@ namespace WebUI
   void getHelpItems( String *output, output_format format );
   void getHelpItemsJSON( String *output );
   void getHelpItemsTXT( String *output );
+  void getHelpItemTXT( String *output, const char* key );
   void ls( String *output );
   void getLogs( String *output );
   void getIndexPage( String *output );

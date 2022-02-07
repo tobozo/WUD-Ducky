@@ -25,9 +25,15 @@
 \*/
 #pragma once
 
+#define PREF_NAMESPACE "WUD"
+
 namespace prefs
 {
   void reset();
   void set( const char *name, const char *value );
-  void getget( const char *name, char *dest, size_t max_len, const char *default_value );
+  void get( const char *name, char *dest, size_t max_len, const char *default_value );
+  void setUChar( const char *name, uint8_t value );
+  void getUChar( const char *name, uint8_t *dest, uint8_t default_value );
+  void setFloat( const char *name, float value );
+  void getFloat( const char *name, float *dest, float default_value );
 };

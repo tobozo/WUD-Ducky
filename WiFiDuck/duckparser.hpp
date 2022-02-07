@@ -17,6 +17,7 @@ struct duckCommand
   const char* name;
   duckCommandCb cb;
   bool needs_args;
+  const char* help_text;
 };
 
 struct duckCommandSet

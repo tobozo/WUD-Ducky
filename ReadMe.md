@@ -1,6 +1,10 @@
 # ESP32-S2 WUD-Ducky
 
-This project is an attempt to add USB HID to the default example provided with @AprilBrother's [WUD](https://wiki.aprbrother.com/en/wud.html) (*), however it also supports any ESP32-S2 equipped with a SD Card.
+WUD-Ducky is to [WUD](https://wiki.aprbrother.com/en/wud.html#wud) what [WHID-Injector](https://github.com/whid-injector/WHID) is to [Cactus-WHID](https://blog.aprbrother.com/product/cactus-whid): a rubber ducky script parser, with mouse and pendrive support.
+
+**This is project requires basic troubleshooting skills and a good understanding of the Arduino IDE.**
+
+WUD-Ducky is an attempt to add USB HID to the default example provided with @AprilBrother's [WUD](https://wiki.aprbrother.com/en/wud.html) (*), however it also supports any ESP32-S2 equipped with a SD Card.
 
 
 The default [platformio POC](https://github.com/volca/wireless_usb_disk) coming with the WUD has been extended to support HID Composite (Keyboard+Mouse) and implements a payload parser.
@@ -137,8 +141,10 @@ See the [wiki page](https://wiki.aprbrother.com/en/wud.html) for more info.
  - @chegewara for helping me starting with this project and maintaining the awesome ESPTinyUSB library.
  - @SpaceHuhn for letting my copy parts of the WiFiDuck parser.
  - @whid-injector for providing inspiration.
+ - @bblanchon for his awesome ArduinoJson library.
  - https://github.com/spacehuhn/wifi_ducky
  - https://github.com/chegewara/EspTinyUSB
  - https://github.com/whid-injector/WHID
+ - https://github.com/bblanchon/ArduinoJson
 
 

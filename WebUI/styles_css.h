@@ -353,6 +353,7 @@ label[for="no-reload-checkbox"]::before {
 }
 label[for="control-panel-toggle"]::before {
   content: "⚙";
+  line-height: 1.5em;
 }
 label[for="infos-panel-toggle"]::before {
   content: "ℹ️";
@@ -399,6 +400,7 @@ input#control-panel-toggle:checked ~ * label[for="control-panel-toggle"]::before
 input#infos-panel-toggle:checked ~ * label[for="infos-panel-toggle"]::before
 {
   content: "🔙";
+  line-height: 1.8em;
 }
 
 

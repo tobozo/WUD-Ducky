@@ -31,7 +31,6 @@
 #include "../logger.h"
 
 Preferences _prefs;
-#define PREF_NAMESPACE "WUD"
 
 namespace prefs
 {
@@ -43,15 +42,16 @@ namespace prefs
      _prefs.end();
   }
 
+
   void set( const char *name, const char *value, size_t len )
   {
     _prefs.begin(PREF_NAMESPACE, false );
     char buf[len+2] = {0};
     snprintf( buf, len+1, "%s", value );
     if( _prefs.putString(name, buf) ) {
-      Logger::logsprintf("Pref saved: '%s' (%d bytes)", name, len-1 );
+      Logger::logsprintf("Pref '%s' saved: char[%d]", name, len-1 );
     } else {
-      Logger::logsprintf("Pref saving failed! '%s' (%d bytes)", name, len-1 );
+      Logger::logsprintf("Pref '%s' saving failed!  (char[%d])", name, len-1 );
     }
     _prefs.end();
   }
@@ -60,11 +60,57 @@ namespace prefs
     _prefs.begin(PREF_NAMESPACE, true );
     size_t len = _prefs.getString(name, dest, max_len );
     if( len > 0 ) {
-      Logger::logsprintf("Pref thawed: %s (%d bytes)", name, len );
+      Logger::logsprintf("Pref '%s' thawed: char[%d]", name, len );
     } else {
       len = strlen(default_value)+1;
       snprintf( dest, max_len, "%s", default_value );
-      Logger::logsprintf("Pref defaulted: %s='%s' (default='%s')", name, dest, default_value );
+      Logger::logsprintf("Pref '%s' defaulted to '%s')", name, default_value );
+    }
+    _prefs.end();
+  }
+
+
+  void setUChar( const char *name, uint8_t value )
+  {
+    _prefs.begin(PREF_NAMESPACE, false );
+    if( _prefs.putUChar(name, value) ) {
+      Logger::logsprintf("Pref saved: '%s' => %d", name, value );
+    } else {
+      Logger::logsprintf("Pref saving failed! '%s' => %d", name, value );
+    }
+    _prefs.end();
+  }
+  void getUChar( const char *name, uint8_t *dest, uint8_t default_value )
+  {
+    _prefs.begin(PREF_NAMESPACE, true );
+    *dest = _prefs.getUChar(name, default_value );
+    if( *dest != default_value ) {
+      Logger::logsprintf("Pref thawed: '%s' => %d", name, *dest );
+    } else {
+      Logger::logsprintf("Pref defaulted: '%s' => %d", name, default_value );
+    }
+    _prefs.end();
+  }
+
+
+  void setFloat( const char *name, float value )
+  {
+    _prefs.begin(PREF_NAMESPACE, false );
+    if( _prefs.putFloat(name, value) ) {
+      Logger::logsprintf("Pref saved: '%s' => %.2f", name, value );
+    } else {
+      Logger::logsprintf("Pref saving failed! '%s' => %.2f", name, value );
+    }
+    _prefs.end();
+  }
+  void getFloat( const char *name, float *dest, float default_value )
+  {
+    _prefs.begin(PREF_NAMESPACE, true );
+    *dest = _prefs.getFloat(name, default_value );
+    if( *dest != default_value ) {
+      Logger::logsprintf("Pref thawed: '%s' => %.2f", name, *dest );
+    } else {
+      Logger::logsprintf("Pref defaulted: '%s' => %.2f", name, default_value );
     }
     _prefs.end();
   }

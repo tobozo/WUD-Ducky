@@ -102,6 +102,15 @@ void SerialPrintHelp()
   */
 }
 
+void SerialPrintHelpArg()
+{
+  String output;
+  WebUI::getHelpItemTXT( &output, duckparser::wordnode->str );
+  USBSerial.println(output);
+  output = String();
+}
+
+
 
 void SerialBegin()
 {
@@ -149,6 +158,7 @@ void LoadWiFiCreds()
   prefs::get( "AP_PASSWORD",  AP_PASSWORD,  PASSWORD_MAX_LEN, DEFAULT_AP_PASSWORD );
   prefs::get( "STA_SSID",     STA_SSID,     SSID_MAX_LEN,     DEFAULT_STA_SSID );
   prefs::get( "STA_PASSWORD", STA_PASSWORD, PASSWORD_MAX_LEN, DEFAULT_STA_PASSWORD );
+  NTP::loadPrefs();
   //logmsg( String( "Prefs AP_SSID='" + String(AP_SSID) + "' AP_PASSWORD='" + String(AP_PASSWORD) + "' STA_SSID='" + String(STA_SSID) + "' STA_PASSWORD='" + String(STA_PASSWORD) + "'" ) );
   //wificreds_loaded = true;
 }
@@ -177,6 +187,45 @@ void SetPassword_STA()
     prefs::set( "STA_PASSWORD", duckparser::wordnode->str, duckparser::wordnode->len );
   }
 }
+
+
+void SetNTPZone()
+{
+  if( duckparser::wordnode->len > 0 ) {
+    size_t servers_count = sizeof( NTP::Servers ) / sizeof( NTP::Server );
+    // TODO: parse float
+    uint8_t zonenum = atoi( duckparser::wordnode->str );
+    if( zonenum < servers_count ) {
+      NTP::setServer( zonenum );
+    } else {
+      Logger::logsprintf("%d is not a valid zone index (input=%s)", duckparser::wordnode->str );
+    }
+  }
+}
+
+
+void SetDST()
+{
+  if( duckparser::wordnode->len > 0 ) {
+    int8_t dst = atoi( duckparser::wordnode->str );
+    NTP::setDst( dst > 0 );
+  }
+}
+
+
+void SetTZ()
+{
+  if( duckparser::wordnode->len > 0 ) {
+    int8_t zonenum = atoi( duckparser::wordnode->str );
+    if( zonenum > -24.0 && zonenum < 24 ) {
+      NTP::setTimezone( (float)zonenum );
+    } else {
+      Logger::logsprintf("%d is not a valid zone index (input=%s)", duckparser::wordnode->str );
+    }
+  }
+}
+
+
 
 
 void InitWiFiAP()
@@ -299,51 +348,64 @@ void StopKeyboard()
 }
 
 
+
+#define HELP_TEXT_help            "e.g. help SysInfo"
+#define HELP_TEXT_SysInfo         "Print system information."
+#define HELP_TEXT_SerialBegin     "Start the serial interface (implicit at boot)."
+#define HELP_TEXT_LoadWiFiCreds   "Loads AP/STA and NTP settings from preferences."
+#define HELP_TEXT_ResetPrefs      "Reset NVS preferences to the factory values."
+#define HELP_TEXT_SetSSID_AP      "Set the SSID for the WiFi Access Point.\n\tMax 32 chars.\n\n\te.g. SetSSID_AP WUD-NUTQUACKER"
+#define HELP_TEXT_SetSSID_STA     "Set the SSID for the WiFi Station.\n\tMax 32 chars.\n\n\te.g. SetSSID_STA my-router-ssid"
+#define HELP_TEXT_SetPassword_AP  "Set the Password for the WiFi Access Point.\n\tMin 8 chars, max 63 chars.\n\n\te.g. SetPassword_AP myl337p4s5"
+#define HELP_TEXT_SetPassword_STA "Set the Password for the  WiFi Station.\n\tMin 8 chars, max 63 chars.\n\n\te.g. SetPassword_STA myl337p4s5"
+#define HELP_TEXT_SetNTPZone      "Set the NTP zone (stored as pref).\n\n\t0=Global\n\t1=Africa\n\t2=Asia\n\t3=Europe\n\t4=North America\n\t5=Oceania\n\t6=South America\n\n\te.g. SetNTPZone 3"
+#define HELP_TEXT_SetDST          "Set the daylight saving time, 0=off, 1=on  (stored as pref).\n\n\te.g. SetDST 1"
+#define HELP_TEXT_SetTZ           "Set the timezone offset in hours (stored as pref).\n\n\te.g. SetTZ 2"
+
+
 // WUD-Ducky system functionalities as Ducky Commands in a mix of real and lambda functions array.
 // A few are still missing, such as ESP-Restart, AP controls, debug, etc
 duckCommand WUDDuckCommands[] =
 {
   { "help",              SerialPrintHelp,                      false },
-  { "SysInfo",           SystemInfo,                           false },
-  { "SerialBegin",       SerialBegin,                          false },
+  { "help",              SerialPrintHelpArg,                   true,  HELP_TEXT_help },
+  { "SysInfo",           SystemInfo,                           false, HELP_TEXT_SysInfo },
+  { "SerialBegin",       SerialBegin,                          false, HELP_TEXT_SerialBegin },
   { "StopSerial",        StopSerial,                           false },
   { "SerialDebug",       SerialDebug,                          false },
   { "StopSD",            deinitSD,                             false },
   { "StopPenDrive",      deinitPenDrive,                       false },
   { "StartUSB",          StartUSB,                             false },
-//  { "InitWiFi",          InitWiFi,                             false },
 
-  { "LoadWiFiCreds",     LoadWiFiCreds,                        false }, // load AP/STA settings from preferences
+  { "LoadWiFiCreds",     LoadWiFiCreds,                        false, HELP_TEXT_LoadWiFiCreds },
   { "InitWiFiAP",        InitWiFiAP,                           false },
   { "InitWiFiSTA",       InitWiFiSTA,                          false },
   { "StopWiFiSTA",       StopWiFiSTA,                          false },
 
+  { "ResetPrefs",        ResetPrefs,                           false, HELP_TEXT_ResetPrefs  },
+  { "SetSSID_AP",        SetSSID_AP,                           true,  HELP_TEXT_SetSSID_AP },
+  { "SetSSID_STA",       SetSSID_STA,                          true,  HELP_TEXT_SetSSID_STA },
+  { "SetPassword_AP",    SetPassword_AP,                       true,  HELP_TEXT_SetPassword_AP },
+  { "SetPassword_STA",   SetPassword_STA,                      true,  HELP_TEXT_SetPassword_STA },
 
-  { "ResetPrefs",        ResetPrefs,                           false },
-  { "SetSSID_AP",        SetSSID_AP,                           true  },
-  { "SetSSID_STA",       SetSSID_STA,                          true  },
-  { "SetPassword_AP",    SetPassword_AP,                       true  },
-  { "SetPassword_STA",   SetPassword_STA,                      true  },
+  { "SetNTPZone",        SetNTPZone,                           true,  HELP_TEXT_SetNTPZone },
+  { "SetDST",            SetDST,                               true,  HELP_TEXT_SetDST },
+  { "SetTZ",             SetTZ,                                true,  HELP_TEXT_SetTZ },
 
-
-  { "InitLittleFS",        InitLittleFS,                           false },
+  { "InitLittleFS",      InitLittleFS,                         false },
   { "InitSD",            InitSD,                               false },
   { "InitMouse",         InitMouse,                            false },
   { "InitKeyboard",      InitKeyboard,                         false },
   { "StopKeyboard",      StopKeyboard,                         false },
   { "InitPenDrive",      [](){ initPenDrive(); },              false },
-  { "StartWebServer",    [](){ WS::startWebServer(); },            false },
+  { "StartWebServer",    [](){ WS::startWebServer(); },        false },
   { "StopWiFi",          [](){ WiFi.mode(WIFI_OFF); },         false },
   { "StopMouse",         [](){ AbsMouse.end(); },              false },
   { "logs",              [](){ Logger::printdmesg( serialprintln ); }, false },
   { "logs-disable",      [](){ Logger::disable(); },           false },
   { "logs-enable",       [](){ Logger::enable(); },            false },
   { "logs-clear",        [](){ Logger::clear(); },             false },
-  //{"StopUSB", [](){ } },
-  //{"StopWebServer", [](){  } },
-  //{"SetWiFiMode", [](){  } },
-  //{"SetWiFiSSID", [](){  } },
-  //{"SetWiFiPass", [](){  } },
+
 };
 
 duckCommandSet WUDDuckCommandsSet = {WUDDuckCommands, sizeof( WUDDuckCommands ) / sizeof( duckCommand )};

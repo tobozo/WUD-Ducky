@@ -84,6 +84,9 @@ const char* info_txt = R"infoTXT(
     STA IP Address: {{STA_ADDR}}
     WiFi Access Point: {{softap_begun}} (SSID={{AP_SSID}} PASS={{AP_PASSWORD}})
     WiFi Station: {{wifista_begun}} (SSID={{STA_SSID}} PASS={{STA_PASSWORD}})
+    NTC Client: {ntp_enabled}
+       Server zone: {NTP_ZONE}
+       Server address: {NTP_SERVERADDR}
 
 
 )infoTXT";

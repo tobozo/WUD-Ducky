@@ -341,7 +341,7 @@ namespace duckcommands
   {
   //{ "Command",              callbackFunction,     needs_args },
     { "REM",                  setRem,               false },
-    { "STRING",               setString,            false  },
+    { "STRING",               setString,            false },
     { "LOCALE",               setLocale,            true  },
     { "DELAY",                setDelay,             true  },
     { "DEFAULTDELAY",         setDefaultDelay,      true  },

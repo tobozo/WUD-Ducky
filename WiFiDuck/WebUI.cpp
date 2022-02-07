@@ -28,6 +28,7 @@
 
 
 #include "WebUI.hpp"
+#include "NTP.hpp"
 
 #include "../WebUI/index_html.h"
 #include "../WebUI/styles_css.h"
@@ -151,6 +152,7 @@ namespace WebUI
     String VendorId        = "0x" + String( USB_VID, HEX );
     String MacAddr         = WiFi.macAddress();
     String IpAddr          = WiFi.localIP().toString();
+
     #if ARDUINO_USB_CDC_ON_BOOT
       const char* SerialDebug = "UART0";
     #else
@@ -212,6 +214,9 @@ namespace WebUI
       { "wifista_begun"      , wifista_begun ?started:stopped   },
       { "STA_SSID"           , STA_SSID                },
       { "STA_PASSWORD"       , fakepass/*STA_PASSWORD*/},
+      { "ntp_enabled"        , NTP::enabled ?enabled:disabled },
+      { "NTP_ZONE"           , NTP::Servers[NTP::currentServer].name },
+      { "NTP_SERVERADDR"     , NTP::Servers[NTP::currentServer].addr },
 
     };
 
@@ -256,7 +261,7 @@ namespace WebUI
     #define TITLE_NAMEDKEYS "Legacy WiFiDuck named keys"
     #define TITLE_LEGACYCMD "Legacy WiFiDuck commands"
     #define TITLE_ESPWUDCMD "WUD Ducky commands"
-    if( !WUDStatus::usbserial_begun ) return;
+    //if( !WUDStatus::usbserial_begun ) return;
 
     String mc = ""; // macro separator
 
@@ -302,6 +307,42 @@ namespace WebUI
         serializeJson(duckyCommandsDoc, *output);
       break;
     }
+  }
+
+
+
+
+  void getHelpItemTXT( String *output, const char* _key )
+  {
+    using namespace duckparser;
+    String keyStr = String(_key);
+    keyStr.trim();
+    const char* key = keyStr.c_str();
+    *output += "help: " + keyStr + "\n\n\t";
+    //Logger::logsprintf("Searching help text for command '%s'", key );
+    for( int i=0;i<keys->count;i++ ) {
+      if( strcmp( keys->commands[i].name, key ) == 0 ) {
+        if( keys->commands[i].help_text )
+          *output += String( keys->commands[i].help_text ) + "\n";
+        return;
+      }
+    }
+    for( int i=0;i<legacy_commands->count;i++ ) {
+      if( strcmp( legacy_commands->commands[i].name, key ) == 0 ) {
+        if( legacy_commands->commands[i].help_text )
+          *output += String( legacy_commands->commands[i].help_text ) + "\n";
+        return;
+      }
+    }
+    for( int i=0;i<custom_commands->count;i++ ) {
+      if( strcmp( custom_commands->commands[i].name, key ) == 0 ) {
+        if( custom_commands->commands[i].help_text )
+          *output += String( custom_commands->commands[i].help_text ) + "\n";
+        return;
+      }
+    }
+    // ducks can troll too
+    *output += "I know that, I just don't want to share it :p\n";
   }
 
   void getHelpItemsTXT( String *output )  { getHelpItems(output, SYSINFO_TXT ); }

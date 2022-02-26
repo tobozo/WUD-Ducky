@@ -40,5 +40,6 @@ namespace WUDStatus
   bool numlock_on      = false;
   bool capslock_on     = false;
   bool scrolllock_on   = false;
+  bool ota_enabled     = true;
 
 };

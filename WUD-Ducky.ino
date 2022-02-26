@@ -58,7 +58,9 @@ static void WiFiEventCallback(WiFiEvent_t event)
 
 void serialprintln(String msg)
 {
-  USBSerial.println( msg );
+  if( WUDStatus::usbserial_begun ) {
+    USBSerial.println( msg );
+  }
 }
 
 
@@ -66,7 +68,9 @@ void SystemInfo()
 {
   String sysInfo;
   WebUI::getSystemInfoTXT( &sysInfo );
-  USBSerial.println( sysInfo );
+  if( WUDStatus::usbserial_begun ) {
+    USBSerial.println( sysInfo );
+  }
   sysInfo = String();
 }
 
@@ -75,7 +79,9 @@ void SerialPrintHelp()
 {
   String output;
   WebUI::getHelpItemsTXT( &output );
-  USBSerial.println(output);
+  if( WUDStatus::usbserial_begun ) {
+    USBSerial.println(output);
+  }
   output = String();
   /*
   using namespace duckparser;
@@ -106,7 +112,9 @@ void SerialPrintHelpArg()
 {
   String output;
   WebUI::getHelpItemTXT( &output, duckparser::wordnode->str );
-  USBSerial.println(output);
+  if( WUDStatus::usbserial_begun ) {
+    USBSerial.println(output);
+  }
   output = String();
 }
 
@@ -198,7 +206,7 @@ void SetNTPZone()
     if( zonenum < servers_count ) {
       NTP::setServer( zonenum );
     } else {
-      Logger::logsprintf("%d is not a valid zone index (input=%s)", duckparser::wordnode->str );
+      Logger::logsprintf("[NTP] %d is not a valid zone index (input=%s)", duckparser::wordnode->str );
     }
   }
 }
@@ -220,7 +228,7 @@ void SetTZ()
     if( zonenum > -24.0 && zonenum < 24 ) {
       NTP::setTimezone( (float)zonenum );
     } else {
-      Logger::logsprintf("%d is not a valid zone index (input=%s)", duckparser::wordnode->str );
+      Logger::logsprintf("[TZ] %d is not a valid zone index (input=%s)", duckparser::wordnode->str );
     }
   }
 }
@@ -248,21 +256,23 @@ void InitWiFiSTA()
   // advertise the product name via mDNS
   // so it becomes accessible via http://wud-nutquacker.local/
 
-  if(!MDNS.begin( USB_PRODUCT )) {
-    Logger::logmsg("Error starting mDNS");
+  if(!MDNS.begin( USB.productName() /*USB_PRODUCT*/ )) {
+    Logger::logmsg("[mDNS] Error starting mDNS");
+  } else {
+    Logger::logsprintf("[mDNS] Advertising: %s.local", USB.productName()/*USB_PRODUCT*/ );
   }
 
   // TODO: use WiFi events and a separate task
   unsigned long timeout = 10000, now = millis();
   while (WiFi.status() != WL_CONNECTED) {
     if( millis()-now > timeout ) {
-      Logger::logmsg("WiFi Timed out");
+      Logger::logmsg("[WiFi] Timeout");
       return;
     }
     vTaskDelay(10);
   }
   WUDStatus::wifista_begun = true;
-  Logger::logmsg( "WiFi STA IP: " + WiFi.localIP().toString() );
+  Logger::logmsg( "[WiFi] STA IP: " + WiFi.localIP().toString() );
   NTP::enable();
 }
 
@@ -302,6 +312,8 @@ void InitMouse()
   AbsMouse.begin();
   MouseGFX = new GfxMouse( &AbsMouse );
   MouseGFX->setDisplay( 1920*2, 1080 );
+  WUDStatus::absmouse_begun = true;
+  Logger::logsprintf("[HID] AbsMouse report ID: %d", HID_REPORT_ID_MOUSE );
 }
 
 void StartUSB()
@@ -310,11 +322,11 @@ void StartUSB()
     // USB was started by arduino core
     Logger::logmsg("USB already started");
   } else {
-    USB.VID( USB_VID );
-    USB.PID( USB_PID );
+    //USB.VID( USB_VID );
+    //USB.PID( USB_PID );
     USB.productName( USB_PRODUCT );
     USB.manufacturerName( USB_MANUFACTURER );
-    USB.serialNumber( USB_SERIAL );
+    //USB.serialNumber( USB_SERIAL );
     if( !USB.begin() ) {
       Logger::logmsg("USB Failed to start");
       return;
@@ -337,6 +349,7 @@ void InitKeyboard()
 {
   if( WUDStatus::keyboard_begun ) return;
   Keyboard.begin();
+  Logger::logsprintf("[HID] Keyboard report ID: %d", HID_REPORT_ID_KEYBOARD );
   WUDStatus::keyboard_begun = true;
 }
 
@@ -345,6 +358,16 @@ void StopKeyboard()
   if( !WUDStatus::keyboard_begun ) return;
   Keyboard.end();
   WUDStatus::keyboard_begun = false;
+}
+
+
+void EnableOTA()
+{
+  WUDStatus::ota_enabled = true;
+}
+void DisableOTA()
+{
+  WUDStatus::ota_enabled = false;
 }
 
 
@@ -382,6 +405,9 @@ duckCommand WUDDuckCommands[] =
   { "InitWiFiSTA",       InitWiFiSTA,                          false },
   { "StopWiFiSTA",       StopWiFiSTA,                          false },
 
+  { "EnableOTA",         EnableOTA,                            false },
+  { "DisableOTA",        DisableOTA,                           false },
+
   { "ResetPrefs",        ResetPrefs,                           false, HELP_TEXT_ResetPrefs  },
   { "SetSSID_AP",        SetSSID_AP,                           true,  HELP_TEXT_SetSSID_AP },
   { "SetSSID_STA",       SetSSID_STA,                          true,  HELP_TEXT_SetSSID_STA },
@@ -400,7 +426,7 @@ duckCommand WUDDuckCommands[] =
   { "InitPenDrive",      [](){ initPenDrive(); },              false },
   { "StartWebServer",    [](){ WS::startWebServer(); },        false },
   { "StopWiFi",          [](){ WiFi.mode(WIFI_OFF); },         false },
-  { "StopMouse",         [](){ AbsMouse.end(); },              false },
+  { "StopMouse",         [](){ AbsMouse.end(); WUDStatus::absmouse_begun = false; }, false },
   { "logs",              [](){ Logger::printdmesg( serialprintln ); }, false },
   { "logs-disable",      [](){ Logger::disable(); },           false },
   { "logs-enable",       [](){ Logger::enable(); },            false },
@@ -436,6 +462,33 @@ void runpayload( fs::FS *fs, const char* payload)
 }
 
 
+struct asyncfspayload_t
+{
+  fs::FS *fs;
+  const char* payload;
+};
+
+
+static bool payload_running = false;
+
+static void asyncPayload( void* param )
+{
+  if( param == NULL ) vTaskDelete(NULL);
+  while( payload_running ) vTaskDelay( 100 );
+  payload_running = true;
+  asyncfspayload_t* aspl = (asyncfspayload_t*) param;
+  runpayload( aspl->fs, aspl->payload);
+  payload_running = false;
+  vTaskDelete(NULL);
+}
+
+
+void runPayloadAsync( fs::FS *fs, const char* payload )
+{
+  asyncfspayload_t aspl = { fs, payload };
+  xTaskCreate( asyncPayload, "asyncPayload", 4096, &aspl, 1, NULL );
+}
+
 
 void setup()
 {
@@ -446,10 +499,11 @@ void setup()
   // attach loggers to USB items, messages are deferred for later viewing with ducky "logs" command
   USBPenDriveLogger        = Logger::logsprintf;
 
-  WS::WebServerLogger      = Logger::logmsg;          // basic logger
+  WS::WebServerLogger      = Logger::logmsg;     // basic logger
   WS::WebServerLogsPrinter = Logger::printdmesg; // logs history printer
   WS::HIDKeySender         = duckparser::parse;  // string quacker
-  WS::runpayload           = runpayload;           // file quacker
+  WS::runpayload           = runpayload;         // file quacker
+  WS::runPayloadAsync      = runPayloadAsync;
 
   MouseLogger              = Logger::logmsg;
 
@@ -457,7 +511,9 @@ void setup()
   duckparser::init(&WUDDuckCommandsSet);
 
   // use custom ducky commands to run this skech :-)
-  duckparser::parse( "SerialBegin" );
+  if( ARDUINO_USB_CDC_ON_BOOT != 0 ) {
+    duckparser::parse( "SerialBegin" );
+  }
   duckparser::parse( "InitKeyboard" );
   duckparser::parse( "InitMouse" );
   duckparser::parse( "InitPenDrive" );
@@ -473,7 +529,10 @@ void setup()
 
 void loop()
 {
-  if( WUDStatus::webserver_begun ) WS::server.handleClient(); // process webserver commands
+  //if( WUDStatus::webserver_begun ) WS::server.handleClient(); // process webserver commands
+  if( WUDStatus::webserver_begun ) WS::ws.cleanupClients();
+  if( WUDStatus::ota_enabled ) ArduinoOTA.handle();
+
   if( WUDStatus::usbserial_begun && USBSerial.available() )     // process serial commands
   {
     String line = "";
@@ -484,6 +543,6 @@ void loop()
       duckparser::parse( line );
     } while( --repeats > 0 );
   }
-  vTaskDelay(10);
+  //vTaskDelay(10);
 }
 

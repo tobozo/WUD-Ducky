@@ -26,6 +26,7 @@
 #pragma once
 
 //  - Easy maintenance: ENABLE SYNTAX HIGHLIGHTING FOR JavaScript and ignore the C header/footer of this file
+
 const char* script_js = R"ScriptJS(
 
 
@@ -33,12 +34,11 @@ const mainDiv   = document.querySelector('div.main');
 const infoDiv   = document.querySelector('.infos');
 const filesList = document.getElementById('cont-files');
 const infoTpl   = document.getElementById('infos-template');
-
+const mouseTab  = document.getElementById("mouse-tab");
 
 let logsEnabled =  document.querySelector('[name="logs-switcher"]:checked').dataset["logs"] === "on";
 let isReadOnlyFS = false;
 let sysinfo      = {};
-
 
 
 function tplparse( tpl, domtarget, markers )
@@ -62,7 +62,6 @@ function showInfo()
   infoDiv.style.display = 'block';
   infoDiv.focus();
 }
-
 
 
 function quack( msg, onsuccess, onerror )
@@ -131,7 +130,6 @@ function changeFS( newfs )
 };
 
 
-
 function UIselectFS( selectedFS )
 {
   console.log("selecting fs: ", selectedFS );
@@ -140,7 +138,6 @@ function UIselectFS( selectedFS )
     case 'sd': document.body.classList.add("nodelete"); break;
   }
 }
-
 
 
 function onFSRadioClick(selectedRadio)
@@ -159,7 +156,6 @@ function onFSRadioClick(selectedRadio)
     console.error("target radio has no fs dataset");
   }
 }
-
 
 
 function setpath()
@@ -199,7 +195,6 @@ function xmlHttpReq( success_cb, close_cb, error_cb )
 }
 
 
-
 function upload()
 {
   const filePath = document.getElementById("filepath").value;
@@ -231,12 +226,12 @@ function upload()
   }
 }
 
+
 function closeEditor()
 {
   editor.remove();
   document.querySelector('.text-editor').remove();
 }
-
 
 
 function deleteFile( path )
@@ -249,6 +244,7 @@ function deleteFile( path )
   xh.send(formData);
 }
 
+
 function saveFile( path )
 {
   const file = new File([editor.value], path, { type: "text/plain", });
@@ -258,7 +254,6 @@ function saveFile( path )
   xh.open("POST", "/upload");
   xh.send(formData);
 }
-
 
 
 function editFile( path )
@@ -275,7 +270,6 @@ function editFile( path )
 }
 
 
-
 function runPayload( path )
 {
   fetch("/runpayload?file="+encodeURI(path)).then(async(response) => {
@@ -288,7 +282,6 @@ function runPayload( path )
 }
 
 
-
 function formatBytes(bytes, decimals = 2)
 {
   if (bytes === 0) return '0 Bytes';
@@ -299,8 +292,108 @@ function formatBytes(bytes, decimals = 2)
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-// const hasCompression
-// const compressedReadableStream = inputReadableStream.pipeThrough(new CompressionStream('gzip'));
+
+const AbsMouseReport = ( posX_int16_t, posY_int16_t, btn_state, wheel ) =>
+{
+  let asUint8 = new Uint8Array(7);
+
+  asUint8[0] = btn_state & 0xff;
+
+  // posX [0 - 32767] as int16_t
+  asUint8[1] = posX_int16_t & 0xff;
+  asUint8[2] = (posX_int16_t >> 8) & 0xff;
+
+  // posY [0 - 32767] as int16_t
+  asUint8[3] = posY_int16_t & 0xff;
+  asUint8[4] = (posY_int16_t >> 8) & 0xff;
+
+  // vertical wheel [-127 to 127]
+  asUint8[5] = wheel;
+
+  // horizontal wheel [-127 to 127]
+  asUint8[6] = 0x00;
+
+  return asUint8;
+}
+
+
+const AbsMousePad = (div) =>
+{
+  let socket         = null;
+  let socketEnabled  = false;
+  let eventsAttached = false;
+  let lastbtn        = 0;
+  let lastx          = 0;
+  let lasty          = 0;
+  let lastwheel      = 0;
+
+  const MouseReporter = (e) =>
+  {
+    if( div.offsetWidth === 0 || div.offsetHeight === 0 ) return false;
+    if( e.offsetY < 0 || e.offsetX < 0 ) return false;
+    const x     = div.dataset['x'];
+    const y     = div.dataset['y'];
+    const btn   = div.dataset['btn'];
+    const wheel = div.dataset['wheel'];
+    if( x !== lastx || y !== lasty || btn !== lastbtn || lastwheel !== wheel ) {
+      const absX   = (x/(div.offsetWidth/32768)) & 0xffff;
+      const absY   = (y/(div.offsetHeight/32768)) & 0xffff;
+      const report = AbsMouseReport( absX, absY, btn, wheel );
+      if( socketEnabled ) socket.send( report );
+      div.dataset['wheel'] = 0;
+    }
+    lastx     = x;
+    lasty     = y;
+    lastbtn   = btn;
+    lastwheel = wheel;
+    e.stopPropagation();
+    e.cancelBubble = true;
+    return false;
+  };
+
+  const setBtn = ( val ) =>
+  {
+    div.dataset['btn'] = val;
+  };
+
+  const setXY = ( x, y ) =>
+  {
+    div.dataset['x'] = x;
+    div.dataset['y'] = y;
+  };
+
+  const setWheel = ( e ) =>
+  {
+    div.dataset['wheel'] = e.deltaY >= 0 ? Math.min( e.deltaY, 127 ) : Math.max( e.deltaY, -127 );
+  };
+
+  const setupSocket = () =>
+  {
+    socket = new WebSocket('ws://'+location.host+'/ws');
+    socket.onmessage = (e) => console.log('Message from server ', e.data);
+    socket.onopen    = (e) => { socket.send('Hello Server!'); socketEnabled = true; };
+    socket.onclose   = (e) => { if (e.wasClean) console.log(`[ws:closed][code=${e.code} reason=${e.reason}]`); else console.log('[ws:died]'); socketEnabled = false; }
+    socket.onerror   = (e) => console.log(`[ws:error] ${e.message}`);
+  };
+
+  const setupMouseEvents = () =>
+  {
+    div.oncontextmenu = (e) => { return false; }
+    div.onmouseup     = (e) => { setBtn( 0x00 ); return MouseReporter(e);  }
+    div.onmousedown   = (e) => { switch (e.button) { case 0:setBtn(0x01);break; case 1:setBtn(0x04);break; case 2:setBtn(0x02);break; } return MouseReporter(e); }
+    div.onmousemove   = (e) => { setXY( e.offsetX, e.offsetY ); return MouseReporter(e); }
+    div.onwheel       = (e) => { setWheel( e ); return MouseReporter(e); }
+    div.onclick       = (e) => { if( e.offsetY < 0 ) div.parentElement.style.display = 'none'; return false; }
+  };
+
+  if( !eventsAttached ) {
+    setupSocket();
+    setupMouseEvents();
+    eventsAttached = true;
+  }
+
+  div.parentElement.style.display = 'block';
+};
 
 
 function loadPage(dirpath) {
@@ -356,14 +449,7 @@ function loadPage(dirpath) {
                 duckyOptions.innerHTML += `<option value="${cmd}">`;
               });
             });
-            /*
-            res.commands.forEach( function( cmdset ) {
-              cmdset.forEach( function( cmd ) {
-                duckyOptions.innerHTML += `<option value="${cmd}">`;
-              });
-            });*/
           }
-
 
           if( filesList ) {
             const tableHeaders = {
@@ -400,6 +486,7 @@ function loadPage(dirpath) {
               hasQuackFile = isQuackFile ? true : hasQuackFile;
               if( !hasActions ) actions = 'n/a';
 
+              // TODO: build from DOM Elements, grid layout can glitch when built with innerHTML
               filesList.innerHTML +=
                 `<div class="tr tbody ${hasActions?'has-actions':''}">
                     ${adjView}
@@ -421,7 +508,6 @@ function loadPage(dirpath) {
   };
 
   loadFiles(dirpath);
-
 }
 
 

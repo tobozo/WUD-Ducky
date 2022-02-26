@@ -22,13 +22,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  *
+ * - Easy maintenance: ENABLE SYNTAX HIGHLIGHTING FOR CSS and ignore the C header/footer of this file
+ *
 \*/
 #pragma once
 
 const char* styles_css  = R"StylesCSS(
-
-
-
 
 :root {
   --body-bgcolor: #1451AE;
@@ -66,7 +65,6 @@ const char* styles_css  = R"StylesCSS(
   --toggle-button-content:"";
   --action-button-width:5rem;
   --action-button-text-display:inline;
-
 }
 
 
@@ -83,17 +81,7 @@ button { border-radius: 0.2rem; padding: 0.2rem 0.4rem; margin: 0 .7rem; border:
 /* prevent hscrollbar appearance while animating */
 div.main { position: relative; overflow: hidden; }
 
-
-.icon {
-  width: 1em;
-  height: 1em;
-  display: inline-block;
-  margin-left: 0;
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: contain;
-  user-select: none;
-}
+.icon { width: 1em; height: 1em; display: inline-block; margin-left: 0; background-repeat: no-repeat; background-position: center center; background-size: contain; user-select: none; }
 
 .icon.sdcard {
   background-image: url("data:image/svg+xml;utf8,%3csvg xmlns='http://www.w3.org/2000/svg' fill='white' width='24' height='24' viewBox='0 0 24 24'%3e%3cpath d='M18 2h-8L4.02 8 4 20c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-6 6h-2V4h2v4zm3 0h-2V4h2v4zm3 0h-2V4h2v4z' /%3e%3c/svg%3e")
@@ -111,8 +99,6 @@ div.main { position: relative; overflow: hidden; }
 {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='15%25' fill='%23ff3034'/%3E%3Cpath fill='%23fff' d='M126 120.53a188.46 188.46 0 0 0 266.53 266.52 7.69 7.69 0 1 1 10.87 10.87 203.83 203.83 0 0 1-288.26-288.26A7.69 7.69 0 0 1 126 120.53zm52.5 240.22a26 26 0 1 0 0 1M409 334a273 273 0 0 0-231.5-231.5A150 150 0 0 0 139 130v26a216 216 0 0 1 217 216h26a111 111 0 0 0 27-39M240 83l-4 12a298 298 0 0 1 181 180l11-4A172 172 0 0 0 240 83zm5 342a118 118 0 0 0-95-171 10.61 10.61 0 0 1 3-21 140 140 0 0 1 120 177l31 9 26.5-10a195 195 0 0 0-163-230 66.6 66.6 0 1 0-18 131.5 63 63 0 0 1 42 95.5l21 14z'/%3E%3C/svg%3E");
 }
-
-
 
 
 .radio-switch {
@@ -169,8 +155,6 @@ input[data-fs="sd"]+label, input[data-fs="spiffs"]+label {
   user-select: none;
 }
 
-
-
 nav {
   width: 100%;
   max-width: 80em;
@@ -179,10 +163,7 @@ nav {
 }
 
 
-
-
 .sr-only { display:none; }
-
 
 .explorer .action-button { margin: 0; padding: 0; width: 1.8em; height: 1.8em; line-height: .1em; font-size: 1em; }
 .explorer dd .action-button {  width: var(--action-button-width); margin-right: 1em; }
@@ -233,11 +214,7 @@ nav {
 .text-editor { position: fixed; top: 0; left: 0; width: 100%; display: block; padding-top: 3em; height: 100%; background: rgba(0,0,0,0.75); z-index: 1001; }
 .text-editor textarea { width: calc( 100% - 1em ); min-height: 30vh; resize: both; margin-bottom: .5rem; }
 
-/*
-Max width before this PARTICULAR table gets nasty
-This query will take effect for any screen smaller than 760px
-and also iPads specifically.
-*/
+/* This query will take effect for any screen smaller than 760px and also iPads specifically. */
 @media  only screen and (max-width: 760px), (min-device-width: 768px) and (max-device-width: 1024px)  {
   /* prevent double-tap from selecting non tabular text */
   body, h1, h2, h3, p, div { user-select:none; }
@@ -282,16 +259,13 @@ and also iPads specifically.
   .explorer #cv2:checked ~ div label[for="cv2"] { display:none; }
 
   body { padding:0; }
-
 }
-
 
 nav label[for="newfile"] { position: absolute; left: 2.5rem; top: 0.4rem; width: 1.8em; height: 1.8em; }
 #info { position: absolute; left: 0.4rem;  top: 0.4rem; }
 #reload { position: absolute; right: 2.5rem;  top: 0.4rem; }
 #settings { position: absolute; right: 0.4rem;  top: 0.4rem; }
 .overflow-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
 
 /* quack form */
 .quacker-tab {
@@ -305,16 +279,8 @@ nav label[for="newfile"] { position: absolute; left: 2.5rem; top: 0.4rem; width:
   border-top: .3em solid rgba(255,255,255,.7);
   z-index: 10000;
 }
-.quacker-tab #quackinput {
-  border-radius: .5em;
-  border-color: transparent;
-  width: 16rem;
-}
-label[for="quackinput"] {
-  display:block;
-  padding: 0.2rem;
-}
-
+.quacker-tab #quackinput { border-radius: .5em; border-color: transparent; width: 16rem; }
+label[for="quackinput"] { display:block; padding: 0.2rem; }
 
 /* file explorer */
 
@@ -351,16 +317,9 @@ label[for="no-reload-checkbox"]::before {
   top: 50%;
   transform: translate(-50%,-50%);
 }
-label[for="control-panel-toggle"]::before {
-  content: "⚙";
-  line-height: 1.5em;
-}
-label[for="infos-panel-toggle"]::before {
-  content: "ℹ️";
-}
-label[for="no-reload-checkbox"]::before {
-  content: "🔃";
-}
+label[for="control-panel-toggle"]::before { content: "⚙"; line-height: 1.5em; }
+label[for="infos-panel-toggle"]::before { content: "ℹ️"; }
+label[for="no-reload-checkbox"]::before { content: "🔃"; }
 
 /* div rules to hide 'other' divs */
 
@@ -395,14 +354,12 @@ input#control-panel-toggle:checked ~ * label[for="newfile"]
   opacity:0.5;
 }
 
-
 input#control-panel-toggle:checked ~ * label[for="control-panel-toggle"]::before,
 input#infos-panel-toggle:checked ~ * label[for="infos-panel-toggle"]::before
 {
   content: "🔙";
   line-height: 1.8em;
 }
-
 
 .files-view, .infos, #control-panel {
   transition: transform 0.3s linear, top 0.2s;
@@ -413,30 +370,10 @@ input#infos-panel-toggle:checked ~ * label[for="infos-panel-toggle"]::before
 .explorer button.clear-logs-button { position: absolute; transform: translate(0, -110%); right: 0; }
 #logs::before { display:block;content:"System Logs:"; margin-bottom: .5rem; }
 #filepath::before { content: attr(value); }
-
-
 #uploader { display:none; }
-
-#upload {
-  margin: 1em auto;
-  display: none;
-  width: 32em;
-  max-width: calc( 100vw - 2em );
-  position:relative;
-}
-
-#upload::after {
-  content: attr(data-path);
-  width: 100%;
-  text-overflow: ellipsis;
-  overflow-x: hidden;
-  display: block;
-  line-height: 2.6em;
-  font-weight: bold;
-  font-size: .9em;
-}
+#upload { margin: 1em auto; display: none; width: 32em; max-width: calc( 100vw - 2em ); position:relative; }
+#upload::after { content: attr(data-path); width: 100%; text-overflow: ellipsis; overflow-x: hidden; display: block; line-height: 2.6em; font-weight: bold; font-size: .9em; }
 #newfile { display:none; }
-
 #logs { text-align: left; max-height: 480px; overflow-y: scroll; font-family: courier new; color: lightgreen; background: black; padding: 0.5em 1em; }
 #filesystemlogs { margin: 0 auto; }
 
@@ -489,33 +426,10 @@ input#infos-panel-toggle:checked ~ * label[for="infos-panel-toggle"]::before
 .infos .enabled, .infos .on { color: lightgreen; }
 .infos .stopped, .infos .disabled { color: darkred; }
 
-.infos .icon.espressif {
-  padding: 0;
-  margin: .5em .5em 0 0;
-  width: 100%;
-  height: 1.5em;
-  display: inline-block;
-  text-indent: 2em;
-  background-position: left;
-}
-
-.infos span[data-status]::after {
-  content: " " attr(class);
-  color: white;
-  text-transform: capitalize;
-  padding-left: 0.5em;
-}
-
-.infos .kbd span[data-status] {
-  display:inline-block;
-  width: 100%;
-  line-height: 2.5em;
-}
-
-.infos .kbd span[data-status]::after {
-  white-space: pre;
-}
-
+.infos .icon.espressif { padding: 0; margin: .5em .5em 0 0; width: 100%; height: 1.5em; display: inline-block; text-indent: 2em; background-position: left; }
+.infos span[data-status]::after { content: " " attr(class); color: white; text-transform: capitalize; padding-left: 0.5em; }
+.infos .kbd span[data-status] { display:inline-block; width: 100%; line-height: 2.5em; }
+.infos .kbd span[data-status]::after { white-space: pre; }
 
 @keyframes glow {
   from {
@@ -560,6 +474,26 @@ body.credits { padding: 1rem }
 /* disclaimer page */
 body.disclaimer { padding: 1rem }
 
+.mouse-tab-container {
+  display:none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 320px;
+  min-height: 240px;
+  background: rgba(0,0,0,.25);
+  resize: both;
+  overflow: auto;
+  z-index: 100000;
+  padding: 2em;
+  box-sizing: border-box;
+}
+
+#mouse-tab { background: white; width: 100%; height: 100%; position: relative; }
+#mouse-tab::before { position: absolute; top: -1.5em; left: 0; content: "Mouse: " attr(data-btn) ", x:" attr(data-x) ", y:" attr(data-y); }
+#mouse-tab::after { right: 0; top: -1.5em; content: "X"; position: absolute; background: white; color: red; width: 2em; text-align: center; border-radius: .2em .2em 0 0; height: 1.5em; line-height: 1.5em; }
 
 )StylesCSS";
 

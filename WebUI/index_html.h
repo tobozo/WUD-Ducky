@@ -102,6 +102,8 @@ const char* index_html = R"indexHTML(
       </div>
     </div>
 
+    <div class="mouse-tab-container"><div id="mouse-tab" data-btn data-x data-y></div></div>
+
     <div id="uploader-tab">
       <input id="newfile" type="file" onchange="setpath()">
       <input id="filepath" type="hidden">
@@ -142,6 +144,7 @@ const char* index_html = R"indexHTML(
           <div><dt>Chip Id</dt><dd><span class="espressif icon">{{getChipModel}}</span></dd></div>
           <div><dt>📟 Serial debug</dt><dd><span class="{{hwserial_begun}}" data-status>◉</span> ({{SerialDebug}})</dd></div>
           <div><dt>Logging</dt><dd><span class="{{logging_enabled}}" data-status>◉</span></dd></div>
+          <div><dt>OTA</dt><dd><span class="{{ota_enabled}}" data-status>◉</span></dd></div>
           <div><dt>CPU frequency</dt><dd>{{getCpuFreqMHz}} MHz</dd></div>
           <div><dt>Flash frequency</dt><dd>{{flashFreq}} MHz</dd></div>
           <div><dt>Flash chip Id</dt><dd>{{getFlashChipMode}}</dd></div>
@@ -172,7 +175,7 @@ const char* index_html = R"indexHTML(
           <div><dt>🔘 HID</dt><dd><span class="{{hid_ready}}" data-status>◉</span></dd></div>
           <div><dt>📟 Serial</dt><dd><span class="{{usbserial_begun}}" data-status>◉</span></dd></div>
           <div><dt>⌨ Keyboard</dt><dd class="kbd"><span class="{{keyboard_begun}}" data-status>◉</span> <span title="Caps Lock {{capslock_on}}" class="key__button {{capslock_on}}">⇪</span><span title="Num Lock {{numlock_on}}" class="key__button {{numlock_on}}">⇭</span><span  title="Scroll Lock {{scrolllock_on}}" class="key__button {{scrolllock_on}}">⤓</span></dd></div>
-          <div><dt>🖱️ Mouse</dt><dd><span class="{{absmouse_begun}}" data-status>◉</span></dd></div>
+          <div onclick="AbsMousePad(mouseTab)"><dt>🖱️ Mouse</dt><dd><span class="{{absmouse_begun}}" data-status>◉</span></dd></div>
           <div><dt>💾 PenDrive</dt><dd><span class="{{pendrive_begun}}" data-status>◉</span></dd></div>
         </dl>
 
@@ -181,7 +184,8 @@ const char* index_html = R"indexHTML(
         <dl>
           <div><dt>MAC Address</dt><dd>{{MAC_ADDR}}</dd></div>
           <div><dt>STA IP Address</dt><dd>{{STA_ADDR}}</dd></div>
-          <div><dt>WebServer</dt><dd><span class="{{webserver_begun}}" data-status>◉</span></dd></div>
+          <div><dt>Hostname</dt><dd>{{HOST_NAME}} (.home / .local / .localdomain)</dd></div>
+          <div><dt>HTTP/WebSocket Server</dt><dd><span class="{{webserver_begun}}" data-status>◉</span></dd></div>
           <div><dt>WiFi Access Point</dt><dd><span class="{{softap_begun}}" data-status>◉</span></dd></div>
           <div><dt>AP SSID</dt><dd>{{AP_SSID}}</dd></div>
           <div><dt>AP PASS</dt><dd>{{AP_PASSWORD}}</dd></div>

@@ -50,5 +50,5 @@ namespace WebUI
   void fileToJson( fs::File *file, String &output );
   void staticFilesToJson( String &output );
   void lsJson( const char* path, String &output );
-  String formatBytes(size_t bytes);
+  //String formatBytes(size_t bytes);
 };

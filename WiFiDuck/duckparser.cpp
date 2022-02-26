@@ -255,22 +255,22 @@ namespace duckparser
 
   void MouseClickRIGHT()
   {
-    MouseGFX->moveXYrel( 0, 0, MOUSE_RIGHT_BTN );
+    MouseGFX->moveXYrel( 0, 0, MOUSE_RIGHT );
   }
 
   void MouseClickLEFT()
   {
-    MouseGFX->moveXYrel( 0, 0, MOUSE_LEFT_BTN );
+    MouseGFX->moveXYrel( 0, 0, MOUSE_LEFT );
   }
 
   void MouseClickMIDDLE()
   {
-    MouseGFX->moveXYrel( 0, 0, MOUSE_MIDDLE_BTN );
+    MouseGFX->moveXYrel( 0, 0, MOUSE_MIDDLE );
   }
 
   void MouseDoubleClickLEFT()
   {
-    MouseGFX->sendDoubleClick( MOUSE_LEFT_BTN, 100, 100 );
+    MouseGFX->sendDoubleClick( MOUSE_LEFT, 100, 100 );
   }
 
   void MouseMoveToCoords() // absolute
@@ -306,7 +306,7 @@ namespace duckparser
 
   void DrawSpaceInvaders() // easter egg omg!
   {
-    MouseGFX->drawXbm( &Alien_128x64, 900, 500 );
+    xTaskCreate( [](void*param) {  MouseGFX->drawXbm( &Alien_128x64, 900, 500 ); vTaskDelete(NULL); }, "blah", 2048, NULL, 16, NULL );
   }
 
 

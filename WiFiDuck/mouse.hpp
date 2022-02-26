@@ -45,10 +45,11 @@ class GfxMouse
 
 public:
 
-  GfxMouse( HIDAbsMouse *_AbsMouse, uint32_t w=1920, uint32_t h=1080 );
+  GfxMouse( USBHIDAbsMouse *_AbsMouse, uint32_t w=1920, uint32_t h=1080 );
   int32_t screen_width;
   int32_t screen_height;
   uint32_t delayafter = 20; // ms wait after each report
+  uint32_t timeout = 1000; // ms max wait for HID.ready()
 
   // the display width/height is used to translate absolute coordinates to values understood by the mouse driver (0-32767)
   void setDisplay( uint32_t w, uint32_t h );
@@ -88,7 +89,7 @@ public:
   //   void fillRect(int x, int y, int width, int height ) { }
 
 private:
-  HIDAbsMouse *AbsMouse;
+  USBHIDAbsMouse *AbsMouse;
   abs_mouse_report_t MouseReport;
   int32_t _lastx;
   int32_t _lasty;

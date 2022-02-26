@@ -26,38 +26,35 @@
 
 #pragma once
 
+#include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiAP.h>
-#include <WebServer.h>
+#include <ESPAsyncWebServer.h>
 #include <LittleFS.h>
 //#include "WebUI.hpp" // IDE editable web files (can be overriden by spiffs but this is slower)
-
+#include "../logger.h"
 
 typedef void(*wslogprintercb)( String msg );
 
 namespace WS
 {
-  WebServer server(80);
+
+  AsyncWebServer server(80);
+  AsyncWebSocket ws("/ws");
+  AsyncEventSource events("/events");
+
   fs::File fsUploadFile;
   static String logoutput;
   void (*WebServerLogsPrinter)( wslogprintercb cb, bool clear_after );
   wslogprintercb WebServerLogger;
   void (*HIDKeySender)( String str );
   void (*runpayload)( fs::FS *fs, const char* payload);
+  void (*runPayloadAsync)( fs::FS *fs, const char* payload);
   void startWebServer();
 
-   void WebServerLogMsg( String msg );
-   void logprinter(String msg);
-//   String getContentType(String filename);
-//   void handleFileUpload();
-//   bool contentFound(String path);
-//   void handleFileDelete();
-//   void handleFileList();
-//   void handleKeySend();
-//   void handleRunPayload();
-//   void handleInfo();
-//   void handleGetLogs();
-//   void handleChangeFS();
+  void WebServerLogMsg( String msg );
+  void logprinter(String msg);
+
 };

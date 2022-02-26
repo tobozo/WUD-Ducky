@@ -27,8 +27,9 @@
 
 #include "mouse.hpp"
 
+void (*MouseLogger)( String err );
 
-GfxMouse::GfxMouse( HIDAbsMouse *_AbsMouse, uint32_t w, uint32_t h )
+GfxMouse::GfxMouse( USBHIDAbsMouse *_AbsMouse, uint32_t w, uint32_t h )
 {
   AbsMouse = _AbsMouse;
   screen_width = w;
@@ -40,7 +41,7 @@ void GfxMouse::setDisplay( uint32_t w, uint32_t h )
 {
   screen_width = w;
   screen_height = h;
-  if( MouseLogger ) MouseLogger( String( "Mouse moves will translate to ["+String(w)+"*"+String(h)+"]" ) );
+  if( MouseLogger ) MouseLogger( String( "[AbsMouse] Screen size set to ["+String(w)+"*"+String(h)+"]" ) );
   sendReport( screen_width/2, screen_height/2, 0 );
 }
 
@@ -155,7 +156,17 @@ void GfxMouse::sendReport( int x, int y, uint8_t buttons_mask )
 
 void GfxMouse::sendReport()
 {
-  if( WUDStatus::absmouse_begun ) AbsMouse->send(&MouseReport);
+  if( WUDStatus::absmouse_begun ) {
+    int64_t now = millis();
+    while( !HID.ready() ) {
+      if( millis()-now > timeout ) {
+        if( MouseLogger ) MouseLogger("[AbsMouse] HID Timed out");
+        return;
+      }
+      vTaskDelay(1);
+    }
+    AbsMouse->sendReport(&MouseReport);
+  }
 }
 
 abs_mouse_report_t *GfxMouse::getMouseReport()
@@ -216,9 +227,9 @@ void GfxMouse::drawXbm( xbmImage_t* xbmImage, int32_t startx, int32_t starty )
         x = 0;
         y++;
       }
-      sendReport( startx+x+a, starty+y, (block & (1<<a)) ? MOUSE_LEFT_BTN : 0 );
+      sendReport( startx+x+a, starty+y, (block & (1<<a)) ? MOUSE_LEFT : 0 );
     }
-    delay(delayafter);
+    vTaskDelay(delayafter);
   }
   sendReport( _lastx, _lasty, 0 );
 }

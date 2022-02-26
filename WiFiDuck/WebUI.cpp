@@ -113,20 +113,6 @@ namespace WebUI
   };
 
 
-  String formatBytes(size_t bytes)
-  {
-    if (bytes < 1024){
-      return String(bytes)+" B";
-    } else if(bytes < (1024 * 1024)){
-      return String(bytes/1024.0)+" KB";
-    } else if(bytes < (1024 * 1024 * 1024)){
-      return String(bytes/1024.0/1024.0)+" MB";
-    } else {
-      return String(bytes/1024.0/1024.0/1024.0)+" GB";
-    }
-  }
-
-
 
   void getSystemInfo( String *output, output_format format )
   {
@@ -141,23 +127,23 @@ namespace WebUI
     String ChipModel       = String( ESP.getChipModel() );
     String CpuFreqMHz      = String( ESP.getCpuFreqMHz() );
     String FlashChipMode   = String( ESP.getFlashChipMode() );
-    String FlashChipSize   = formatBytes( ESP.getFlashChipSize() );
-    String SketchSize      = formatBytes( ESP.getSketchSize() );
-    String FreeSketchSpace = formatBytes( ESP.getFreeSketchSpace() );
-    String HeapSize        = formatBytes( ESP.getHeapSize() );
-    String FreeHeap        = formatBytes( ESP.getFreeHeap() );
-    String MinFreeHeap     = formatBytes( ESP.getMinFreeHeap() );
-    String MaxAllocHeap    = formatBytes( ESP.getMaxAllocHeap() );
-    String ProductId       = "0x" + String( USB_PID, HEX );
-    String VendorId        = "0x" + String( USB_VID, HEX );
+    String FlashChipSize   = Logger::formatBytes( ESP.getFlashChipSize() );
+    String SketchSize      = Logger::formatBytes( ESP.getSketchSize() );
+    String FreeSketchSpace = Logger::formatBytes( ESP.getFreeSketchSpace() );
+    String HeapSize        = Logger::formatBytes( ESP.getHeapSize() );
+    String FreeHeap        = Logger::formatBytes( ESP.getFreeHeap() );
+    String MinFreeHeap     = Logger::formatBytes( ESP.getMinFreeHeap() );
+    String MaxAllocHeap    = Logger::formatBytes( ESP.getMaxAllocHeap() );
+    String ProductId       = "0x" + String( USB.PID(), HEX );
+    String VendorId        = "0x" + String( USB.VID(), HEX );
     String MacAddr         = WiFi.macAddress();
     String IpAddr          = WiFi.localIP().toString();
 
-    #if ARDUINO_USB_CDC_ON_BOOT
-      const char* SerialDebug = "UART0";
-    #else
-      const char* SerialDebug = "USBSerial";
-    #endif
+    const char* productName      = USB.productName();
+    const char* manufacturerName = USB.manufacturerName();
+    const char* serialNumber     = USB.serialNumber();
+
+    const char* SerialDebug = ARDUINO_USB_CDC_ON_BOOT==0 ? "UART0" : "USBSerial";
 
     const char* online     = "online";
     const char* offline    = "offline";
@@ -188,9 +174,9 @@ namespace WebUI
       { "getMaxAllocHeap"    , MaxAllocHeap.c_str()    },
       { "USB_VID"            , ProductId.c_str()       },
       { "USB_PID"            , VendorId.c_str()        },
-      { "USB_MANUFACTURER"   , USB_MANUFACTURER        },
-      { "USB_PRODUCT"        , USB_PRODUCT             },
-      { "USB_SERIAL"         , USB_SERIAL              },
+      { "USB_MANUFACTURER"   , manufacturerName        },
+      { "USB_PRODUCT"        , productName             },
+      { "USB_SERIAL"         , serialNumber            },
       { "SerialDebug"        , SerialDebug             },
       { "usb_begun"          , usb_begun       ?started:stopped },
       { "hwserial_begun"     , hwserial_begun  ?started:stopped },
@@ -203,12 +189,14 @@ namespace WebUI
       { "spiffs_begun"       , spiffs_begun    ?enabled:disabled },
       { "webserver_begun"    , webserver_begun ?online:offline },
       { "logging_enabled"    , Logger::enabled ?enabled:disabled },
+      { "ota_enabled"        , WUDStatus::ota_enabled ?enabled:disabled },
       { "numlock_on"         , numlock_on      ?on:off },
       { "capslock_on"        , capslock_on     ?on:off },
       { "scrolllock_on"      , scrolllock_on   ?on:off },
       { "MAC_ADDR"           , MacAddr.c_str()         },
       { "STA_ADDR"           , IpAddr.c_str()          },
       { "softap_begun"       , softap_begun ?online:offline    },
+      { "HOST_NAME"          , USB.productName()       },
       { "AP_SSID"            , AP_SSID                 },
       { "AP_PASSWORD"        , fakepass/*AP_PASSWORD*/ },
       { "wifista_begun"      , wifista_begun ?started:stopped   },
@@ -402,12 +390,12 @@ namespace WebUI
   void ls( String *output )
   {
     using namespace WS;
-    String path;
-    if (!server.hasArg("dir")) {
-      path = "/";
-    } else {
-      path = server.arg("dir");
-    }
+    String path = "/";
+    //     if (!server.hasArg("dir")) {
+    //       path = "/";
+    //     } else {
+    //       path = server.arg("dir");
+    //     }
     lsJson( path.c_str(), *output );
   }
 

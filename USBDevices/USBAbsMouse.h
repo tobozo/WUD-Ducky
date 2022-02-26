@@ -26,103 +26,115 @@
 
 #pragma once
 
-#define HAS_ABSMOUSE
+// inherit relative mouse constants
+#include "USBHIDMouse.h"
 
-#define MOUSE_LEFT_BTN    0x01
-#define MOUSE_RIGHT_BTN   0x02
-#define MOUSE_MIDDLE_BTN  0x03
-#define MOUSE_BACK_BTN    0x04
-#define MOUSE_FORWARD_BTN 0x05
-
-#include "USBConfig.h"
-#include "USBHID.h"
-
-void (*MouseLogger)( String err );
-
-
-static uint8_t _report_id = 0x05;
-
-// we use a custom HID report descriptor with absolute mouse positioning
-static const uint8_t abs_mouse_report_descriptor[] = {
-  0x05, 0x01,           // USAGE_PAGE (Generic Desktop)
-  0x09, 0x02,           // USAGE (Mouse)
-  0xa1, 0x01,           // COLLECTION (Application)
-  0x09, 0x01,           //   USAGE (Pointer)
-  0xA1, 0x00,           //   COLLECTION (Physical)
-  0x85, _report_id,     //     REPORT_ID (1)
-  0x05, 0x09,           //     USAGE_PAGE (Button)
-  0x19, 0x01,           //     USAGE_MINIMUM (1)
-  0x29, 0x03,           //     USAGE_MAXIMUM (3)
-  0x15, 0x00,           //     LOGICAL_MINIMUM (0)
-  0x25, 0x01,           //     LOGICAL_MAXIMUM (1)
-  0x95, 0x03,           //     REPORT_COUNT (3)
-  0x75, 0x01,           //     REPORT_SIZE (1)
-  0x81, 0x02,           //     INPUT (Data,Var,Abs)
-  0x95, 0x01,           //     REPORT_COUNT (1)
-  0x75, 0x05,           //     REPORT_SIZE (5)
-  0x81, 0x03,           //     INPUT (Const,Var,Abs)
-  0x05, 0x01,           //     USAGE_PAGE (Generic Desktop)
-  0x09, 0x30,           //     USAGE (X)
-  0x09, 0x31,           //     USAGE (Y)
-  0x16, 0x00, 0x00,     //     LOGICAL_MINIMUM(0)
-  0x26, 0xff, 0x7f,     //     LOGICAL_MAXIMUM(32767)
-  0x75, 0x10,           //     REPORT_SIZE (16)
-  0x95, 0x02,           //     REPORT_COUNT (2)
-  0x81, 0x02,           //     INPUT (Data,Var,Abs)
-  0xC0,                 //   END_COLLECTION
-  0xC0,                 // END COLLECTION
-};
-
+// Absolute Mouse data struct is a copy of the relative mouse struct
+// with int16_t instead of int8_t for X and Y coordinates.
 typedef struct TU_ATTR_PACKED
 {
-  uint8_t buttons = 0;
-  int16_t x = 0;
-  int16_t y = 0;
+    uint8_t buttons = 0;
+    int16_t x = 0;
+    int16_t y = 0;
+    int8_t wheel = 0;
+    int8_t pan = 0;
 } abs_mouse_report_t;
 
+// Absolute Mouse Report Descriptor Template applies those datatype changes too
+#define TUD_HID_REPORT_DESC_ABSMOUSE(...) \
+  HID_USAGE_PAGE ( HID_USAGE_PAGE_DESKTOP      )                   ,\
+  HID_USAGE      ( HID_USAGE_DESKTOP_MOUSE     )                   ,\
+  HID_COLLECTION ( HID_COLLECTION_APPLICATION  )                   ,\
+    /* Report ID if any */\
+    __VA_ARGS__ \
+    HID_USAGE      ( HID_USAGE_DESKTOP_POINTER )                   ,\
+    HID_COLLECTION ( HID_COLLECTION_PHYSICAL   )                   ,\
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_BUTTON  )                   ,\
+        HID_USAGE_MIN   ( 1                                      ) ,\
+        HID_USAGE_MAX   ( 5                                      ) ,\
+        HID_LOGICAL_MIN ( 0                                      ) ,\
+        HID_LOGICAL_MAX ( 1                                      ) ,\
+        /* Left, Right, Middle, Backward, Forward buttons */ \
+        HID_REPORT_COUNT( 5                                      ) ,\
+        HID_REPORT_SIZE ( 1                                      ) ,\
+        HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,\
+        /* 3 bit padding */ \
+        HID_REPORT_COUNT( 1                                      ) ,\
+        HID_REPORT_SIZE ( 3                                      ) ,\
+        HID_INPUT       ( HID_CONSTANT                           ) ,\
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_DESKTOP )                   ,\
+        /* X, Y absolute position [0, 32767] */ \
+        HID_USAGE       ( HID_USAGE_DESKTOP_X                    ) ,\
+        HID_USAGE       ( HID_USAGE_DESKTOP_Y                    ) ,\
+        HID_LOGICAL_MIN  ( 0x00                                ) ,\
+        HID_LOGICAL_MAX_N( 0x7FFF, 2                           ) ,\
+        HID_REPORT_SIZE  ( 16                                  ) ,\
+        HID_REPORT_COUNT ( 2                                   ) ,\
+        HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_ABSOLUTE ) ,\
+        /* Vertical wheel scroll [-127, 127] */ \
+        HID_USAGE       ( HID_USAGE_DESKTOP_WHEEL                )  ,\
+        HID_LOGICAL_MIN ( 0x81                                   )  ,\
+        HID_LOGICAL_MAX ( 0x7f                                   )  ,\
+        HID_REPORT_COUNT( 1                                      )  ,\
+        HID_REPORT_SIZE ( 8                                      )  ,\
+        HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE )  ,\
+      HID_USAGE_PAGE  ( HID_USAGE_PAGE_CONSUMER ), \
+       /* Horizontal wheel scroll [-127, 127] */ \
+        HID_USAGE_N     ( HID_USAGE_CONSUMER_AC_PAN, 2           ), \
+        HID_LOGICAL_MIN ( 0x81                                   ), \
+        HID_LOGICAL_MAX ( 0x7f                                   ), \
+        HID_REPORT_COUNT( 1                                      ), \
+        HID_REPORT_SIZE ( 8                                      ), \
+        HID_INPUT       ( HID_DATA | HID_VARIABLE | HID_RELATIVE ), \
+    HID_COLLECTION_END                                            , \
+  HID_COLLECTION_END \
 
-class HIDAbsMouse: public USBHIDDevice
-{
 
-public:
-
-  HIDAbsMouse(USBHID *_HID)
-  {
-    static bool initialized = false;
-    HID = _HID;
-    if(!initialized){
-      initialized = true;
-      HID->addDevice(this, sizeof(abs_mouse_report_descriptor));
-    }
-  }
-
-  void begin(void)
-  {
-    if( WUDStatus::absmouse_begun ) return;
-    HID->begin();
-    WUDStatus::absmouse_begun = true;
-  }
-
-  uint16_t _onGetDescriptor(uint8_t* buffer)
-  {
-    memcpy(buffer, abs_mouse_report_descriptor, sizeof(abs_mouse_report_descriptor));
-    return sizeof(abs_mouse_report_descriptor);
-  }
-
-  bool send(abs_mouse_report_t * value)
-  {
-    while(!HID->ready() ) vTaskDelay(1);
-    return HID->SendReport( _report_id, value, sizeof(abs_mouse_report_t) );
-  }
-
-  void end()
-  {
-    HID->end();
-    WUDStatus::absmouse_begun = false;
-  }
-
-private:
-  USBHID *HID;
-
+static const uint8_t abs_mouse_report_descriptor[] = {
+    TUD_HID_REPORT_DESC_ABSMOUSE(HID_REPORT_ID(HID_REPORT_ID_MOUSE))
 };
 
+
+// Now the absolute mouse mouse implementation, keep it minimalistic for
+// the meantime since an official AbsMouse implementation is on the way.
+class USBHIDAbsMouse: public USBHIDDevice
+{
+private:
+    USBHID hid;
+public:
+    USBHIDAbsMouse(void);
+    void begin(void);
+    uint16_t _onGetDescriptor(uint8_t* buffer);
+    bool sendReport(abs_mouse_report_t * value);
+    void end();
+};
+
+
+USBHIDAbsMouse::USBHIDAbsMouse(): hid() {
+    static bool initialized = false;
+    if(!initialized){
+        initialized = true;
+        hid.addDevice(this, sizeof(abs_mouse_report_descriptor));
+    }
+}
+
+void USBHIDAbsMouse::begin(void)
+{
+    hid.begin();
+}
+
+uint16_t USBHIDAbsMouse::_onGetDescriptor(uint8_t* buffer)
+{
+    memcpy(buffer, abs_mouse_report_descriptor, sizeof(abs_mouse_report_descriptor));
+    return sizeof(abs_mouse_report_descriptor);
+}
+
+bool USBHIDAbsMouse::sendReport(abs_mouse_report_t * report)
+{
+    return hid.SendReport( HID_REPORT_ID_MOUSE, report, sizeof(abs_mouse_report_t) );
+}
+
+void USBHIDAbsMouse::end()
+{
+    hid.end();
+}

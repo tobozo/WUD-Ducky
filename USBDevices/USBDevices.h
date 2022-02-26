@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../status.h"
+//#include "../status.h"
+#include "../USBDevices/USBConfig.h"
 
 // Cursing after that Serial0/Serial/USBCDC unintuitive example from the official USB library:
 #if ARDUINO_USB_CDC_ON_BOOT
@@ -22,13 +23,17 @@
 // 5) Enabling ARDUINO_USB_CDC_ON_BOOT starts USB before the setup() is reached
 
 #include "../USBDevices/USBKeyboard.h"
+//#include "USBHIDKeyboard.h"
 #include "../USBDevices/USBAbsMouse.h"
+//#include "USBHIDMouse.h"
 #include "../USBDevices/USBPendrive.h"
 
 
 USBHID HID;
-HIDAbsMouse AbsMouse( &HID );
+USBHIDAbsMouse AbsMouse;
+//HIDAbsMouse AbsMouse;//( &HID );
 DuckyKeyboard Keyboard;
+//USBHIDKeyboard Keyboard;
 
 
 static void usbEventCallback(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)

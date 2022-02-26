@@ -248,9 +248,9 @@ bool initPenDrive()
     //else duckyFS = &SD;
   }
 
-  MSC.vendorID("Pendrive");//max 8 chars
-  MSC.productID("TheQuacken");//max 16 chars
-  MSC.productRevision("0x2a");//max 4 chars
+  //MSC.vendorID("Pendrive");//max 8 chars
+  //MSC.productID("TheQuacken");//max 16 chars
+  //MSC.productRevision("0x2a");//max 4 chars
   MSC.onStartStop(onStartStop);
   MSC.mediaPresent(true);
 
@@ -263,7 +263,14 @@ bool initPenDrive()
   } else {
     MSC.onRead(onRead);
     MSC.onWrite(onWrite);
-    WUDStatus::pendrive_begun = MSC.begin( SD.cardSize()/512, 512 );
+
+    size_t numSectors = SD.numSectors();
+    size_t sectorSize = SD.sectorSize();
+    uint64_t cardSize = SD.cardSize();
+
+    //WUDStatus::pendrive_begun = MSC.begin( SD.cardSize()/512, 512 );
+    WUDStatus::pendrive_begun = MSC.begin( numSectors, sectorSize );
+    if( USBPenDriveLogger ) USBPenDriveLogger("Sectors: %d, Sector Size: %d, Card Size: %s", numSectors, sectorSize, Logger::formatBytes( cardSize ).c_str() );
     if( USBPenDriveLogger ) USBPenDriveLogger("PenDrive+SD %s", WUDStatus::pendrive_begun?"started successfully":"failed to start" );
   }
 

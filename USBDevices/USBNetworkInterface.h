@@ -3,6 +3,8 @@
 // WORK IN PROGRESS, NOTHING IS FUNCTIONAL HERE
 
 
+#if 0
+
 //#include "USB.h"
 
 
@@ -96,3 +98,5 @@ tinyusb_config_t tusb_rndis_cfg =
   .external_phy = false // In the most cases you need to use a `false` value
 };
 */
+
+#endif

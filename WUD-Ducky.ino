@@ -31,7 +31,6 @@
  *
 \*/
 
-
 #include "config_check.h" // fail early if the right board settings aren't selected
 #include "WiFiDuck/duckparser.cpp" // SpaceHuhn's WiFiDuck implementation, with some mouse tweaks
 #include "WiFiDuck/WebServer.cpp"  // WUD Ducky Web UI
@@ -465,7 +464,7 @@ void runpayload( fs::FS *fs, const char* payload)
 struct asyncfspayload_t
 {
   fs::FS *fs;
-  const char* payload;
+  const char* payloadfile;
 };
 
 
@@ -477,16 +476,16 @@ static void asyncPayload( void* param )
   while( payload_running ) vTaskDelay( 100 );
   payload_running = true;
   asyncfspayload_t* aspl = (asyncfspayload_t*) param;
-  runpayload( aspl->fs, aspl->payload);
+  runpayload( aspl->fs, aspl->payloadfile);
   payload_running = false;
   vTaskDelete(NULL);
 }
 
 
-void runPayloadAsync( fs::FS *fs, const char* payload )
+void runPayloadAsync( fs::FS *fs, const char* payloadfile )
 {
-  asyncfspayload_t aspl = { fs, payload };
-  xTaskCreate( asyncPayload, "asyncPayload", 4096, &aspl, 1, NULL );
+  static asyncfspayload_t aspl = { fs, payloadfile };
+  xTaskCreate( asyncPayload, "asyncPayload", 8192, &aspl, 1, NULL );
 }
 
 
@@ -504,6 +503,7 @@ void setup()
   WS::HIDKeySender         = duckparser::parse;  // string quacker
   WS::runpayload           = runpayload;         // file quacker
   WS::runPayloadAsync      = runPayloadAsync;
+  //Vendor._logsprintf       = Logger::logsprintf;
 
   MouseLogger              = Logger::logmsg;
 
@@ -524,6 +524,8 @@ void setup()
   duckparser::parse( "InitWiFiAP" );
   duckparser::parse( "InitWiFiSTA" );
   duckparser::parse( "StartWebServer" );
+
+
 }
 
 
@@ -543,6 +545,5 @@ void loop()
       duckparser::parse( line );
     } while( --repeats > 0 );
   }
-  //vTaskDelay(10);
 }
 

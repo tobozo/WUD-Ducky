@@ -26,6 +26,8 @@
   //#define USB_SERIAL CONFIG_TINYUSB_DESC_SERIAL_STRING
 #endif
 
+#define WEBUSB_URL "http://" USB_PRODUCT "/webusb"
+
 
 #include "USB.h"
 #include "../logger.h"

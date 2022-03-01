@@ -28,10 +28,13 @@
 //#include "USBHIDMouse.h"
 #include "../USBDevices/USBPendrive.h"
 
+//#include "USBOSFingerPrint.h"
+//#include "USBNetworkInterface.h"
+
 
 USBHID HID;
 USBHIDAbsMouse AbsMouse;
-//HIDAbsMouse AbsMouse;//( &HID );
+//HIDAbsMouse AbsMouse;
 DuckyKeyboard Keyboard;
 //USBHIDKeyboard Keyboard;
 

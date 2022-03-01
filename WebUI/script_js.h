@@ -39,6 +39,7 @@ const mouseTab  = document.getElementById("mouse-tab");
 let logsEnabled =  document.querySelector('[name="logs-switcher"]:checked').dataset["logs"] === "on";
 let isReadOnlyFS = false;
 let sysinfo      = {};
+let kbdLocales   = [];
 
 
 function tplparse( tpl, domtarget, markers )
@@ -56,9 +57,27 @@ function tplparse( tpl, domtarget, markers )
 }
 
 
+
+function populateLocaleChooser()
+{
+  const datalist = document.getElementById("ducky-locales");
+  if( !datalist ) {
+    log_e("Locales can't be set :(");
+    return;
+  }
+  const selectedLocale = sysinfo && sysinfo.KEYBOARD_LOCALE ? sysinfo.KEYBOARD_LOCALE : kbdLocales[0];
+  datalist.innerHTML = '';
+  kbdLocales.forEach( function( locale ) {
+    const selected = ( locale === selectedLocale ) ? ' selected' : '';
+    datalist.innerHTML += `<option value="${locale}"${selected}>${locale}</option>`;
+  });
+};
+
+
 function showInfo()
 {
   tplparse( infoTpl, infoDiv, sysinfo);
+  populateLocaleChooser();
   infoDiv.style.display = 'block';
   infoDiv.focus();
 }
@@ -87,7 +106,7 @@ function setLogs( target )
       case true: quack("logs-enable",  () => logsEnabled = true ); break;
       case false:quack("logs-disable", () => logsEnabled = false ); break;
     }
-  } else console.log("no change");
+  } //else console.log("no change");
 }
 
 
@@ -115,6 +134,28 @@ function loadLogs()
   xh.open("GET", "/logs", true);
   xh.send(null);
 };
+
+
+function toggleLock( elem, lock )
+{
+  let success = () =>
+  {
+    elem.classList.toggle('on');
+    elem.classList.toggle('off');
+  };
+  quack(lock, success);
+}
+
+
+function setKbdLocale(selectItem)
+{
+  const newLocale = selectItem.options[selectItem.selectedIndex].value;
+  let success = () =>
+  {
+    sysinfo.KEYBOARD_LOCALE = newLocale;
+  };
+  quack('LOCALE ' + newLocale, success );
+}
 
 
 function changeFS( newfs )
@@ -396,6 +437,12 @@ const AbsMousePad = (div) =>
 };
 
 
+
+
+
+
+
+
 function loadPage(dirpath) {
 
   const loadFiles = dir => {
@@ -438,13 +485,16 @@ function loadPage(dirpath) {
             }
           }
 
+          if( res.locales ) {
+            kbdLocales = res.locales;
+          }
+
           if( res.commands ) {
-            console.log( res.commands );
+            //console.log( res.commands );
             const duckyOptions = document.getElementById("ducky-commands");
             duckyOptions.innerHTML = '';
 
             Object.entries( res.commands ).forEach(([key, value]) => {
-              console.log(value);
               value.forEach( function( cmd ) {
                 duckyOptions.innerHTML += `<option value="${cmd}">`;
               });

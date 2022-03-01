@@ -35,8 +35,7 @@
 #include "../WebUI/script_js.h"
 #include "../WebUI/disclaimer_html.h"
 #include "../WebUI/credits_html.h"
-#include "../WebUI/templates/info_txt.h"
-#include "../WebUI/templates/template_html.h"
+#include "../WebUI/info_txt.h"
 
 #include "../mustache.h"
 #include "../status.h"
@@ -57,9 +56,11 @@ namespace WebUI
   {
     {"info",            contentTypeHtml, getSystemInfoTXT },
     {"info.json",       contentTypeJson, getSystemInfoJSON },
+    {"locales",         contentTypeHtml, getLocalesTXT },
+    {"locales.json",    contentTypeHtml, getLocalesJSON },
     {"help",            contentTypeHtml, getHelpItemsTXT },
     {"help.json",       contentTypeJson, getHelpItemsJSON },
-    {"list",            contentTypeHtml, ls },
+    {"list",            contentTypeHtml, ls }, // also brings up locales + command list and sysinfo
     {"logs",            contentTypeText, getLogs },
     {"index.html",      contentTypeHtml, getIndexPage },
   };
@@ -88,8 +89,6 @@ namespace WebUI
         output += ',';
       }
 
-
-
       StaticJsonDocument<128> fileInfoDoc;
       fileInfoDoc["name"]     = String(path);
       fileInfoDoc["type"]     = (is_dir) ? "dir" : "file";
@@ -97,20 +96,32 @@ namespace WebUI
 
       fileInfoDoc["readonly"] = (readonly) ? true : false;
       serializeJson(fileInfoDoc, output);
-
-/*
-      output += "{\"type\":\"";
-      output += (is_dir) ? "dir" : "file";
-      output += "\",\"name\":\"";
-      output += String(path);
-      output += "\",\"size\":";
-      output += String(size);
-      output += ",\"readonly\":";
-      output += (readonly) ? "true" : "false";
-      output += "}";
-*/
     }
   };
+
+
+  void getLocales( String *output, output_format format )
+  {
+    size_t layouts_count = sizeof( keyboard::layouts ) / sizeof(hid_layout_t);
+
+    if( format == SYSINFO_TXT ) {
+      *output += "\nSupported Keyboard Locales:\n\t";
+      for( int i=0; i<layouts_count; i++ ) {
+        *output += String( keyboard::layouts[i].code ) + " ";
+      }
+      *output += "\n";
+    } else { // JSON
+      StaticJsonDocument<1024> layoutsDoc;
+      JsonArray array = layoutsDoc.to<JsonArray>();
+
+      for( int i=0; i<layouts_count; i++ ) {
+        array.add( keyboard::layouts[i].code );
+      }
+      //serializeJsonPretty(layoutsDoc, *output);
+      serializeJson(layoutsDoc, *output);
+    }
+  }
+
 
 
 
@@ -205,7 +216,7 @@ namespace WebUI
       { "ntp_enabled"        , NTP::enabled ?enabled:disabled },
       { "NTP_ZONE"           , NTP::Servers[NTP::currentServer].name },
       { "NTP_SERVERADDR"     , NTP::Servers[NTP::currentServer].addr },
-
+      { "KEYBOARD_LOCALE"    , keyboard::localecode },
     };
 
     size_t markers_count =  sizeof(tplvalues)/sizeof(Poil);
@@ -229,6 +240,8 @@ namespace WebUI
 
   void getSystemInfoTXT( String *output )  { getSystemInfo( output, SYSINFO_TXT ); }
   void getSystemInfoJSON( String *output ) { getSystemInfo( output, SYSINFO_JSON ); }
+  void getLocalesTXT( String *output )     { getLocales( output, SYSINFO_TXT ); }
+  void getLocalesJSON( String *output )    { getLocales( output, SYSINFO_JSON ); }
 
 
   void getIndexPage( String *output )
@@ -382,6 +395,10 @@ namespace WebUI
 
     output += ",\"sysinfo\":";
     getSystemInfoJSON( &output );
+
+    output += ",\"locales\":";
+    getLocalesJSON( &output );
+
 
     output += "}";
   }

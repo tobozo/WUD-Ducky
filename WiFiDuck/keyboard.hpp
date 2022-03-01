@@ -13,8 +13,7 @@
 
 namespace keyboard
 {
-
-    void setLocale(hid_locale_t* locale);
+    void setLocale( hid_layout_t* layout );
 
     void send(KeyReport* k);
     void release();

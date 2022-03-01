@@ -81,7 +81,8 @@ namespace WS
   }
 
 
-  void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len){
+  void onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len)
+  {
     if(type == WS_EVT_CONNECT){
       Logger::logsprintf("ws[%s][%u] connect", server->url(), client->id());
       client->printf("Hello Client %u :)", client->id());
@@ -168,7 +169,8 @@ namespace WS
   }
 
 
-  void handleFileUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final){
+  void handleFileUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *data, size_t len, bool final)
+  {
     if(!index){
       WebServerLogMsg("Receiving file: "+filename );
       fsUploadFile = LittleFS.open(filename, "w");
@@ -332,7 +334,7 @@ namespace WS
     if (!request->hasArg("file")) {
       return request->send(500, contentTypeText, "BAD ARGS");
     }
-    String path = request->arg("file");
+    static String path = request->arg("file");
     if( !duckyFS->exists( path ) ) {
       return request->send(500, contentTypeText, "FILE NOEXISTS");
     }

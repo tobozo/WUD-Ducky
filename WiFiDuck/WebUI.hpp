@@ -44,11 +44,13 @@ namespace WebUI
   void getHelpItemsJSON( String *output );
   void getHelpItemsTXT( String *output );
   void getHelpItemTXT( String *output, const char* key );
+  void getLocales( String *output, output_format format );
+  void getLocalesTXT( String *output );
+  void getLocalesJSON( String *output );
   void ls( String *output );
   void getLogs( String *output );
   void getIndexPage( String *output );
   void fileToJson( fs::File *file, String &output );
   void staticFilesToJson( String &output );
   void lsJson( const char* path, String &output );
-  //String formatBytes(size_t bytes);
 };

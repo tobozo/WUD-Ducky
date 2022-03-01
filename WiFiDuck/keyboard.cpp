@@ -9,8 +9,33 @@
 
 namespace keyboard
 {
+
+    hid_layout_t layouts[] =
+    {
+      { "US",     &locale_us },
+      { "DE",     &locale_de },
+      { "RU",     &locale_ru },
+      { "GB",     &locale_gb },
+      { "ES",     &locale_es },
+      { "FR",     &locale_fr },
+      { "DK",     &locale_dk },
+      { "BE",     &locale_be },
+      { "PT",     &locale_pt },
+      { "IT",     &locale_it },
+      { "SK",     &locale_sk },
+      { "CZ",     &locale_cz },
+      { "SI",     &locale_si },
+      { "BG",     &locale_bg },
+      { "CA-FR",  &locale_cafr },
+      { "CH-DE",  &locale_chde },
+      { "CH-FR",  &locale_chfr },
+      { "HU",     &locale_hu }
+    };
+
+
     // ====== PRIVATE ====== //
-    hid_locale_t* locale      { &locale_us };
+    const char* localecode = layouts[0].code;
+    hid_locale_t* locale   = layouts[0].locale;
 
     KeyReport prev_report = KeyReport { KEY_NONE, KEY_NONE, { KEY_NONE, KEY_NONE, KEY_NONE, KEY_NONE, KEY_NONE, KEY_NONE } };
 
@@ -34,9 +59,10 @@ namespace keyboard
         return k;
     }
 
-    void setLocale(hid_locale_t* locale)
+    void setLocale( hid_layout_t* layout )
     {
-        keyboard::locale = locale;
+      keyboard::locale     = layout->locale;
+      keyboard::localecode = layout->code;
     }
 
     void send(KeyReport* k)

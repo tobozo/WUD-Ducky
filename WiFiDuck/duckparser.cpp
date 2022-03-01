@@ -181,44 +181,12 @@ namespace duckparser
   // set keyboard layout according to the ducky input
   void setLocale()
   {
-    if (compare(wordnode->str, wordnode->len, "US", CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_us);
-    } else if (compare(wordnode->str, wordnode->len, "DE",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_de);
-    } else if (compare(wordnode->str, wordnode->len, "RU",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_ru);
-    } else if (compare(wordnode->str, wordnode->len, "GB",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_gb);
-    } else if (compare(wordnode->str, wordnode->len, "ES",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_es);
-    } else if (compare(wordnode->str, wordnode->len, "FR",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_fr);
-    } else if (compare(wordnode->str, wordnode->len, "DK",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_dk);
-    } else if (compare(wordnode->str, wordnode->len, "BE",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_be);
-    } else if (compare(wordnode->str, wordnode->len, "PT",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_pt);
-    } else if (compare(wordnode->str, wordnode->len, "IT",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_it);
-    } else if (compare(wordnode->str, wordnode->len, "SK",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_sk);
-    } else if (compare(wordnode->str, wordnode->len, "CZ",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_cz);
-    } else if (compare(wordnode->str, wordnode->len, "SI",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_si);
-    } else if (compare(wordnode->str, wordnode->len, "BG",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_bg);
-    } else if (compare(wordnode->str, wordnode->len, "CA-FR", CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_cafr);
-    } else if (compare(wordnode->str, wordnode->len, "CH-DE", CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_chde);
-    } else if (compare(wordnode->str, wordnode->len, "CH-FR", CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_chfr);
-    } else if (compare(wordnode->str, wordnode->len, "HU",    CASE_SENSITIVE)) {
-      keyboard::setLocale(&locale_hu);
+    size_t layouts_count = sizeof( keyboard::layouts ) / sizeof(hid_layout_t);
+    for( int i=0; i<layouts_count; i++ ) {
+      if (compare(wordnode->str, wordnode->len, keyboard::layouts[i].code, CASE_SENSITIVE)) {
+        keyboard::setLocale( &keyboard::layouts[i] );
+      }
     }
-
     ignore_delay = true;
   }
 

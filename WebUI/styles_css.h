@@ -452,6 +452,7 @@ input#infos-panel-toggle:checked ~ * label[for="infos-panel-toggle"]::before
   color: rgba(0,0,0,.75);
   cursor: pointer;
   margin: 0 .5rem;
+  margin-bottom: .5rem;
   border-color: #f2f2f2;
   border-style: solid;
   text-shadow: 0 0.5px 1px #777, 0 2px 6px #f2f2f2;
@@ -466,6 +467,13 @@ input#infos-panel-toggle:checked ~ * label[for="infos-panel-toggle"]::before
   background: -webkit-linear-gradient(top, #666 0%, #555 80%, #333 100%);
   border-color: #666;
   text-shadow: 0 1px 1px #fff;
+  user-select: none;
+}
+
+
+.infos .keyboard-layout label {
+  padding-right: 1em;
+  user-select: none;
 }
 
 /* credits page */

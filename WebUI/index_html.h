@@ -111,16 +111,10 @@ const char* index_html = R"indexHTML(
     </div>
 
     <div class="quacker-tab">
-      <!--
-      <input id="quackinput" type="text">
-      <button onclick="quack(quackinput.value);quackinput.value=''">Quack!</button>
-      -->
       <label for="quackinput">Who let the ducks out?</label>
       <input list="ducky-commands" id="quackinput" name="quackinput" />
       <button id="quack" onclick="quack(quackinput.value);quackinput.value=''">Quack!</button>
-
       <datalist id="ducky-commands"><!--  <option value="Blah"> --></datalist>
-
     </div>
 
     <div class="files-view">
@@ -136,6 +130,16 @@ const char* index_html = R"indexHTML(
     <div class="infos"><h3>Loading Sytem Information...</h3></div>
 
   </div>
+
+
+  <script type="text/template" id="locales-template">
+    <div class="locales-tab">
+      <input list="ducky-locales" id="localesinput" name="localesinput" style="width:6em" />
+      <button id="quack-locale" onclick="quack('LOCALE ' + quackinput.value);this.parentElement.parentElement.innerText=quackinput.value">Set Locale</button>
+      <datalist id="ducky-locales"></datalist>
+    </div>
+  </script>
+
 
   <script type="text/template" id="infos-template">
 
@@ -174,7 +178,17 @@ const char* index_html = R"indexHTML(
           <div><dt>✳️ HUB</dt><dd><span class="{{usb_begun}}" data-status>◉</span></dd></div>
           <div><dt>🔘 HID</dt><dd><span class="{{hid_ready}}" data-status>◉</span></dd></div>
           <div><dt>📟 Serial</dt><dd><span class="{{usbserial_begun}}" data-status>◉</span></dd></div>
-          <div><dt>⌨ Keyboard</dt><dd class="kbd"><span class="{{keyboard_begun}}" data-status>◉</span> <span title="Caps Lock {{capslock_on}}" class="key__button {{capslock_on}}">⇪</span><span title="Num Lock {{numlock_on}}" class="key__button {{numlock_on}}">⇭</span><span  title="Scroll Lock {{scrolllock_on}}" class="key__button {{scrolllock_on}}">⤓</span></dd></div>
+          <div><dt>⌨ Keyboard</dt><dd class="kbd"><span class="{{keyboard_begun}}" data-status>◉</span>
+            <div class="keyboard-locks">
+              <span title="Caps Lock {{capslock_on}}" class="key__button {{capslock_on}}" onclick="toggleLock(this,'CAPSLOCK')">⇪</span>
+              <span title="Num Lock {{numlock_on}}" class="key__button {{numlock_on}}" onclick="toggleLock(this,'NUMLOCK')">⇭</span>
+              <span title="Scroll Lock {{scrolllock_on}}" class="key__button {{scrolllock_on}}" onclick="toggleLock(this,'SCROLLLOCK')">⤓</span>
+            </div>
+            <div class="keyboard-layout">
+              <label for="ducky-locales">Layout </label>
+              <select id="ducky-locales" onchange="setKbdLocale(this)"><option value="{{KEYBOARD_LOCALE}}" selected></option></select>
+            </div>
+          </dd></div>
           <div onclick="AbsMousePad(mouseTab)"><dt>🖱️ Mouse</dt><dd><span class="{{absmouse_begun}}" data-status>◉</span></dd></div>
           <div><dt>💾 PenDrive</dt><dd><span class="{{pendrive_begun}}" data-status>◉</span></dd></div>
         </dl>

@@ -13,9 +13,9 @@ The payload syntax is heavily inspired by [whid-injector](https://github.com/whi
 # Features
 
  - Dongle is detected as Mouse, Keyboard and USB Pendrive
- - Mouse driver uses absolute positioning
+ - Mouse driver uses absolute positioning, can be controlled from WebUI
  - Mounted MicroSD card allows editing files from the OS, ~~and~~ or reading from the ESP
- - Starts WiFi in AP Mode
+ - Starts WiFi in AP or APSTA Mode
  - Runs a Webserver with the following endpoints:
    - `/quack` send script, key or string sequence to the keyboard
    - `/list` list available files on the SD Card
@@ -25,9 +25,10 @@ The payload syntax is heavily inspired by [whid-injector](https://github.com/whi
    - `/delete` delete a file
    - `/upload` upload a file
    - `/*` serves the file from the selected filesystem, makes them editable when SPIFFS is selected
- - Implements **[SpaceHuhn's WiFiDuck commands](https://github.com/SpacehuhnTech/WiFiDuck#scripting)**, but also comes with a few extras for mouse controls:
+ - Implements **[SpaceHuhn's WiFiDuck commands](https://github.com/SpacehuhnTech/WiFiDuck#scripting)**, but also comes with a few extras:
    - `help` : list all non standard ducky commands
    - `logs` : show last logs
+   - `info` : print system information
    - `SetDisplay` [uint16_t+uint16_t] set display dimensions for mouse e.g. `SetDisplay:1920+1080`
    - `DrawSpaceInvaders` : draw space invaders with the mouse, needs paint software full screen with brush preselected
    - `MouseClickRelease` : release all mouse buttons
@@ -56,16 +57,31 @@ The payload syntax is heavily inspired by [whid-injector](https://github.com/whi
    - `StopWiFi` : stop WiFi
    - `StopKeyboard` : stop USB Keyboard (experimental)
    - `StopMouse` : stop USB Mouse (experimental)
+   - `EnableOTA`         Enable OTA flashing, default = on
+   - `DisableOTA`        Disnable OTA flashing
+   - `ResetPrefs`        Reset all prefs (wifi, ntp)
+   - `SetSSID_AP`        Set the SSID for the WiFi Access Point
+   - `SetSSID_STA`       Set the SSID for the WiFi Station
+   - `SetPassword_AP`    Set the Password for the WiFi Access Point
+   - `SetPassword_STA`   Set the Password for the WiFi Station
+   - `SetNTPZone`        Set the NTP preferred zone
+   - `SetDST`            Set the Daylight Savings time
+   - `SetTZ`             Set the Time Zone
+
 
  - Comes with many bugs but also with an easter egg
 
 
 # Debugging:
 
-With the latests changes, it's not necessary to use the magnet when flashing as long as the following settings are enabled:
+With the lastest changed, `USB CDC On Boot` should be **disabled** as it glitches the USB device detection with Windows.
+It's not an issue since OTA updates are now enabled.
+WiFi STA credentials should be set using `SetSSID_STA` and `SetPassword_STA` **ducky commands** though.
+This only needs to be done once as those will be saved in NVS memory and used on next restart.
 
- - `USB CDC On Boot` : `enabled`
- - `Upload Mode` : `Internal USB`
+~~With the latests changes, it's not necessary to use the magnet when flashing as long as the following settings are enabled:~~
+~~ - `USB CDC On Boot` : `enabled`~~
+~~ - `Upload Mode` : `Internal USB`~~
 
 # Customizing:
 
@@ -146,5 +162,6 @@ See the [wiki page](https://wiki.aprbrother.com/en/wud.html) for more info.
  - https://github.com/chegewara/EspTinyUSB
  - https://github.com/whid-injector/WHID
  - https://github.com/bblanchon/ArduinoJson
+ - https://github.com/me-no-dev/ESPAsyncWebServer
 
 

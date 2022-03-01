@@ -11,12 +11,12 @@
 #define digitalPinToInterrupt(p)    (((p)<48)?(p):-1)
 #define digitalPinHasPWM(p)         (p < 46)
 
-#define USB_VID             0xcafe
-#define USB_PID             0xdeca
+//#define USB_VID             0xcafe
+//#define USB_PID             0xdeca
 #define USB_MANUFACTURER    "INGSOC"
 #define USB_PRODUCT         "WUD-Nutquacker"
-#define USB_SERIAL 			    "0xDEADB33F"
-#define USB_WEBUSB_ENABLED	false
+//#define USB_SERIAL 			    "0xDEADB33F"
+//#define USB_WEBUSB_ENABLED	false
 
 static const uint8_t TX = 43;
 static const uint8_t RX = 44;

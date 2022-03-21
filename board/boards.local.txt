@@ -33,8 +33,8 @@ esp32s2_WUD.build.boot=qio
 esp32s2_WUD.build.partitions=default
 esp32s2_WUD.build.defines=
 
-esp32s2_WUD.menu.CDCOnBoot.default=Enabled
-esp32s2_WUD.menu.CDCOnBoot.default.build.cdc_on_boot=1
+esp32s2_WUD.menu.CDCOnBoot.default=Disabled
+esp32s2_WUD.menu.CDCOnBoot.default.build.cdc_on_boot=0
 esp32s2_WUD.menu.CDCOnBoot.cdc=Enabled
 esp32s2_WUD.menu.CDCOnBoot.cdc.build.cdc_on_boot=1
 
@@ -48,9 +48,9 @@ esp32s2_WUD.menu.DFUOnBoot.default.build.dfu_on_boot=0
 esp32s2_WUD.menu.DFUOnBoot.dfu=Enabled
 esp32s2_WUD.menu.DFUOnBoot.dfu.build.dfu_on_boot=1
 
-esp32s2_WUD.menu.UploadMode.default=Internal USB
-esp32s2_WUD.menu.UploadMode.default.upload.use_1200bps_touch=true
-esp32s2_WUD.menu.UploadMode.default.upload.wait_for_upload_port=true
+esp32s2_WUD.menu.UploadMode.default=UART0
+esp32s2_WUD.menu.UploadMode.default.upload.use_1200bps_touch=false
+esp32s2_WUD.menu.UploadMode.default.upload.wait_for_upload_port=false
 esp32s2_WUD.menu.UploadMode.cdc=Internal USB
 esp32s2_WUD.menu.UploadMode.cdc.upload.use_1200bps_touch=true
 esp32s2_WUD.menu.UploadMode.cdc.upload.wait_for_upload_port=true

@@ -321,7 +321,7 @@ void StartUSB()
     // USB was started by arduino core
     Logger::logmsg("USB already started");
   } else {
-    //USB.VID( USB_VID );
+    //USB.VID( USB_VID ); //0x303A
     //USB.PID( USB_PID );
     USB.productName( USB_PRODUCT );
     USB.manufacturerName( USB_MANUFACTURER );

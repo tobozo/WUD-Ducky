@@ -1,6 +1,12 @@
 #pragma once
 
 
+#include "esp32-hal-log.h"
+
+
+
+
+
 #include "esp32-hal-tinyusb.h"
 
 // the only reliable place to override those is in pins_arduino.h

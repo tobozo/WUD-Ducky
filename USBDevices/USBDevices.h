@@ -33,7 +33,7 @@
 
 
 USBHID HID;
-USBHIDAbsMouse AbsMouse;
+USBHIDAbsoluteMouse AbsMouse;
 //HIDAbsMouse AbsMouse;
 DuckyKeyboard Keyboard;
 //USBHIDKeyboard Keyboard;

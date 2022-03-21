@@ -45,7 +45,7 @@ class GfxMouse
 
 public:
 
-  GfxMouse( USBHIDAbsMouse *_AbsMouse, uint32_t w=1920, uint32_t h=1080 );
+  GfxMouse( USBHIDAbsoluteMouse *_AbsMouse, uint32_t w=1920, uint32_t h=1080 );
   int32_t screen_width;
   int32_t screen_height;
   uint32_t delayafter = 20; // ms wait after each report
@@ -79,7 +79,7 @@ public:
   void sendButtons( uint8_t buttons_mask );
   void sendReport( int x, int y, uint8_t buttons_mask );
   void sendReport();
-  abs_mouse_report_t *getMouseReport();
+  hid_abs_mouse_report_t *getMouseReport();
   uint8_t getButtons();
   void drawLine(int x0, int y0, int x1, int y1, uint8_t buttons_mask );
   void drawXbm( xbmImage_t* xbmImage, int32_t startx, int32_t starty );
@@ -89,8 +89,8 @@ public:
   //   void fillRect(int x, int y, int width, int height ) { }
 
 private:
-  USBHIDAbsMouse *AbsMouse;
-  abs_mouse_report_t MouseReport;
+  USBHIDAbsoluteMouse *AbsMouse;
+  hid_abs_mouse_report_t MouseReport;
   int32_t _lastx;
   int32_t _lasty;
   uint8_t _buttons_mask;

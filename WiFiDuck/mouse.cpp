@@ -29,7 +29,7 @@
 
 void (*MouseLogger)( String err );
 
-GfxMouse::GfxMouse( USBHIDAbsMouse *_AbsMouse, uint32_t w, uint32_t h )
+GfxMouse::GfxMouse( USBHIDAbsoluteMouse *_AbsMouse, uint32_t w, uint32_t h )
 {
   AbsMouse = _AbsMouse;
   screen_width = w;
@@ -165,11 +165,11 @@ void GfxMouse::sendReport()
       }
       vTaskDelay(1);
     }
-    AbsMouse->sendReport(&MouseReport);
+    AbsMouse->sendReport(MouseReport);
   }
 }
 
-abs_mouse_report_t *GfxMouse::getMouseReport()
+hid_abs_mouse_report_t *GfxMouse::getMouseReport()
 {
   return &MouseReport;
 }

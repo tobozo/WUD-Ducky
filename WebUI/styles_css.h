@@ -69,7 +69,7 @@ const char* styles_css  = R"StylesCSS(
 
 
 * { box-sizing:content-box; }
-body, h1, h2, h3, p, div { font-family: sans; }
+body, h1, h2, h3, p, div { font-family: Arial, Helvetica, sans-serif, sans; }
 body { background:var(--body-bgcolor); color:var(--body-textcolor); font-size:var(--body-fontsize); margin:0; padding:0.4em; max-width:80em; margin:auto; text-shadow: 1px 1px 1px black; }
 h1, h2, h3 { text-align:center;  }
 h1 { margin: 0; }

@@ -71,7 +71,7 @@ const char* index_html = R"indexHTML(
 
           <li class="radio-switch__item">
             <input type="radio" class="radio-switch__input sr-only" id="fs3" name="fs-switcher" data-fs="spiffs" checked onclick="onFSRadioClick(this)">
-            <label for="fs3" class="radio-switch__label icon spiffs">SPIFFS</label>
+            <label for="fs3" class="radio-switch__label icon spiffs">LittleFS</label>
             <div class="radio-switch__marker" aria-hidden="true"></div>
           </li>
         </ul>
@@ -214,7 +214,7 @@ const char* index_html = R"indexHTML(
       <h2>Storage</h2>
         <dl>
           <div><dt><span class="icon sdcard {{sd_begun}}"></span> SD</dt><dd><span class="{{sd_begun}}" data-status>◉</span></dd></div>
-          <div><dt><span class="icon spiffs {{spiffs_begun}}"></span> SPIFFS</dt><dd><span class="{{spiffs_begun}}" data-status>◉</span></dd></div>
+          <div><dt><span class="icon spiffs {{spiffs_begun}}"></span> LittleFS</dt><dd><span class="{{spiffs_begun}}" data-status>◉</span></dd></div>
         </dl>
   </script>
 

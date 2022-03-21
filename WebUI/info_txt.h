@@ -78,7 +78,7 @@ const char* info_txt = R"infoTXT(
 
   == Storage ==
     SD: {{sd_begun}}
-    SPIFFS: {{spiffs_begun}}
+    LittleFS: {{spiffs_begun}}
 
   == Network ==
     MAC Address: {{MAC_ADDR}}

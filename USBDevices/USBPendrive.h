@@ -265,10 +265,9 @@ bool initPenDrive()
     MSC.onWrite(onWrite);
 
     size_t numSectors = SD.numSectors();
-    size_t sectorSize = SD.sectorSize();
     uint64_t cardSize = SD.cardSize();
+    size_t sectorSize = cardSize/numSectors;//512;//SD.sectorSize();
 
-    //WUDStatus::pendrive_begun = MSC.begin( SD.cardSize()/512, 512 );
     WUDStatus::pendrive_begun = MSC.begin( numSectors, sectorSize );
     if( USBPenDriveLogger ) USBPenDriveLogger("Sectors: %d, Sector Size: %d, Card Size: %s", numSectors, sectorSize, Logger::formatBytes( cardSize ).c_str() );
     if( USBPenDriveLogger ) USBPenDriveLogger("PenDrive+SD %s", WUDStatus::pendrive_begun?"started successfully":"failed to start" );

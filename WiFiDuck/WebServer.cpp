@@ -99,14 +99,14 @@ namespace WS
       if(info->final && info->index == 0 && info->len == len){
         //the whole message is in a single frame and we got all of it's data
         // Logger::logsprintf("ws[%s][%u] %s-message[%llu]: ", server->url(), client->id(), (info->opcode == WS_TEXT)?"text":"binary", info->len);
-        int elemSize = sizeof(abs_mouse_report_t);
+        int elemSize = sizeof(hid_abs_mouse_report_t);
         int elements = len / elemSize;
         if( elements>0 && len%elemSize == 0 ) {
           // is valid abs_mouse_report packet
           for( int i = 0; i < elements; i++ ) {
-            abs_mouse_report_t* report = (abs_mouse_report_t*)(&data[i*elemSize]);
+            hid_abs_mouse_report_t* report = (hid_abs_mouse_report_t*)(&data[i*elemSize]);
             //Logger::logsprintf("ws[%s][%u] Btn: 0x%02x Wheel: %d Coords: [0x%04x:0x%04x]", server->url(), client->id(), report->buttons, report->wheel, report->x, report->y );
-            AbsMouse.sendReport( report );
+            AbsMouse.sendReport( *report );
           }
         } else {
           Logger::logsprintf("ws[%s][%u] mouse invalid msg len: %d (expecting multiple of %d)", server->url(), client->id(), len, elemSize );
@@ -173,7 +173,7 @@ namespace WS
   {
     if(!index){
       WebServerLogMsg("Receiving file: "+filename );
-      fsUploadFile = LittleFS.open(filename, "w");
+      fsUploadFile = LittleFS.open( "/" + filename, "w");
     }
     fsUploadFile.write(data, len);
     if(final){
@@ -181,7 +181,7 @@ namespace WS
         fsUploadFile.close();
       }
       WebServerLogMsg("File Size: " + String( index+len ));
-      WebServerLogMsg("File uploaded successfully");
+      WebServerLogMsg("File "+filename+" uploaded successfully");
 
       request->redirect("/");
       //server.sendHeader("Location", String("/"), true);

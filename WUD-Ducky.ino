@@ -438,15 +438,15 @@ duckCommandSet WUDDuckCommandsSet = {WUDDuckCommands, sizeof( WUDDuckCommands ) 
 
 // run all payloads in a file, called from the webserver
 // TODO: bufferize that
-void runpayload( fs::FS *fs, const char* payload)
+void runpayload( fs::FS *fs, const char* payloadfile)
 {
-  if( !fs->exists( payload ) ) {
-    Logger::logsprintf("runpayload error: file %s does not exist", payload );
+  if( !fs->exists( payloadfile ) ) {
+    Logger::logsprintf("runpayload error: file %s does not exist", payloadfile );
     return;
   }
-  fs::File f = fs->open(payload, "r");
+  fs::File f = fs->open(payloadfile, "r");
   if( !f ) {
-    Logger::logsprintf("runpayload error: file %s cannot be opened", payload );
+    Logger::logsprintf("runpayload error: file %s cannot be opened", payloadfile );
     return;
   }
   String fileContent = "";
@@ -457,14 +457,14 @@ void runpayload( fs::FS *fs, const char* payload)
   }
   f.close();
   //duckparser::parse(fileContent);
-  Logger::logsprintf("payload from file %s run successfully", payload );
+  Logger::logsprintf("payload from file %s run successfully", payloadfile );
 }
 
 
 struct asyncfspayload_t
 {
-  fs::FS *fs;
-  const char* payloadfile;
+  fs::FS *fs = nullptr;
+  char payloadfile[256] = {0};
 };
 
 
@@ -476,7 +476,8 @@ static void asyncPayload( void* param )
   while( payload_running ) vTaskDelay( 100 );
   payload_running = true;
   asyncfspayload_t* aspl = (asyncfspayload_t*) param;
-  runpayload( aspl->fs, aspl->payloadfile);
+  runpayload( aspl->fs, aspl->payloadfile );
+  free( aspl );
   payload_running = false;
   vTaskDelete(NULL);
 }
@@ -484,8 +485,14 @@ static void asyncPayload( void* param )
 
 void runPayloadAsync( fs::FS *fs, const char* payloadfile )
 {
-  static asyncfspayload_t aspl = { fs, payloadfile };
-  xTaskCreate( asyncPayload, "asyncPayload", 8192, &aspl, 1, NULL );
+  asyncfspayload_t *aspl = (asyncfspayload_t *)malloc( sizeof(asyncfspayload_t) );
+  if( aspl == NULL ) {
+    Logger::logsprintf("Cannot run payload %s -- not enough heap free", payloadfile );
+    return;
+  }
+  aspl->fs = fs;
+  snprintf( aspl->payloadfile, 255, "%s", payloadfile );
+  xTaskCreate( asyncPayload, "asyncPayload", 8192, aspl, 1, NULL );
 }
 
 

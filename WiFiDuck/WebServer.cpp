@@ -335,7 +335,7 @@ namespace WS
     if (!request->hasArg("file")) {
       return request->send(500, contentTypeText, "BAD ARGS");
     }
-    static String path = request->arg("file");
+    String path = request->arg("file");
     if( !duckyFS->exists( path ) ) {
       return request->send(500, contentTypeText, "FILE NOEXISTS");
     }

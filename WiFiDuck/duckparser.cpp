@@ -63,11 +63,6 @@ namespace duckparser
   unsigned long sleepStartTime = 0;
   unsigned long sleepTime      = 0;
 
-  // typewriter
-  void type(const char* str, size_t len)
-  {
-    keyboard::write(str, len);
-  }
 
   // shortcut / key presser
   void press(const char* str, size_t len)
@@ -87,11 +82,6 @@ namespace duckparser
     else keyboard::press(str); // Utf8 character
   }
 
-  // keyboard releaser
-  void release()
-  {
-    keyboard::release();
-  }
 
   // input parser
   unsigned int toInt(const char* str, size_t len)
@@ -287,9 +277,9 @@ namespace duckparser
   void setString()
   {
     if (inString) {
-      type(linenode->str, linenode->len);
+      keyboard::write(linenode->str, linenode->len);
     } else {
-      type(line_str, line_str_len);
+      keyboard::write(line_str, line_str_len);
     }
     inString = !line_end;
   }
@@ -395,12 +385,12 @@ namespace duckcommands
     {"NUM_PLUS",    [](){ keyboard::pressKey(KEY_KPPLUS);     } },
 
     // modifiers
-    {"CTRL",        [](){ keyboard::pressKey(KEY_MOD_LCTRL); } },
-    {"CONTROL",     [](){ keyboard::pressKey(KEY_MOD_LCTRL); } },
-    {"SHIFT",       [](){ keyboard::pressKey(KEY_MOD_LSHIFT); } },
-    {"ALT",         [](){ keyboard::pressKey(KEY_MOD_LALT); } },
-    {"WINDOWS",     [](){ keyboard::pressKey(KEY_MOD_LMETA); } },
-    {"GUI",         [](){ keyboard::pressKey(KEY_MOD_LMETA); } },
+    {"CTRL",        [](){ keyboard::pressModifier(KEY_MOD_LCTRL); } },
+    {"CONTROL",     [](){ keyboard::pressModifier(KEY_MOD_LCTRL); } },
+    {"SHIFT",       [](){ keyboard::pressModifier(KEY_MOD_LSHIFT); } },
+    {"ALT",         [](){ keyboard::pressModifier(KEY_MOD_LALT); } },
+    {"WINDOWS",     [](){ keyboard::pressModifier(KEY_MOD_LMETA); } },
+    {"GUI",         [](){ keyboard::pressModifier(KEY_MOD_LMETA); } },
   };
 
 };
@@ -490,7 +480,7 @@ namespace duckparser
           press(wordnode->str, wordnode->len);
           wordnode = wordnode->next;
         }
-        if (line_end) release();
+        if (line_end) keyboard::release();
       }
       linenode = linenode->next;
       if (!inString && !inComment && !ignore_delay) sleep(defaultDelay);

@@ -56,5 +56,6 @@ namespace WS
 
   void WebServerLogMsg( String msg );
   void logprinter(String msg);
+  void sendWSLogEntry( String logEntry );
 
 };

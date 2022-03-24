@@ -35,6 +35,7 @@ const infoDiv   = document.querySelector('.infos');
 const filesList = document.getElementById('cont-files');
 const infoTpl   = document.getElementById('infos-template');
 const mouseTab  = document.getElementById("mouse-tab");
+const logsDiv   = document.getElementById("logs");
 
 let logsEnabled =  document.querySelector('[name="logs-switcher"]:checked').dataset["logs"] === "on";
 let isReadOnlyFS = false;
@@ -113,8 +114,16 @@ function setLogs( target )
 function clearLogs()
 {
   quack("logs-clear");
-  document.getElementById("logs").innerHTML = '';
+  logsDiv.innerHTML = '';
 }
+
+
+function addLogEntry( msg )
+{
+  logsDiv.innerText += msg;
+  logsDiv.innerHTML += '<br>';
+}
+
 
 
 function loadLogs()
@@ -123,11 +132,10 @@ function loadLogs()
   xh.onreadystatechange = () => {
     if (xh.readyState == 4 && xh.status == 200) {
       const res = xh.responseText.split("\n");
-      const cont = document.querySelector('#logs');
-      cont.innerText = '';
+      //const cont = document.querySelector('#logs');
+      //cont.innerText = '';
       res.forEach(str => {
-        cont.innerText += str;
-        cont.innerHTML += '<br>';
+        addLogEntry( str );
       });
     };
   };
@@ -358,10 +366,37 @@ const AbsMouseReport = ( posX_int16_t, posY_int16_t, btn_state, wheel ) =>
 }
 
 
+
+let socket         = null;
+let socketEnabled  = false;
+let pongReceived   = false;
+
+
+const canLog = (msg) =>
+{
+  if( !pongReceived && msg === 'I got your text message' ) {
+    pongReceived = true;
+    return false;
+  }
+  return pongReceived;
+}
+
+
+
+const setupSocket = () =>
+{
+  if( socketEnabled ) return;
+  socket = new WebSocket('ws://'+location.host+'/ws');
+  socket.onmessage = (e) => { if( canLog( e.data ) ) addLogEntry( e.data ); console.log('Message from server ', e.data); }
+  socket.onopen    = (e) => { socket.send('Hello Server!'); socketEnabled = true; };
+  socket.onclose   = (e) => { if (e.wasClean) console.log(`[ws:closed][code=${e.code} reason=${e.reason}]`); else console.log('[ws:died]'); socketEnabled = false; }
+  socket.onerror   = (e) => console.log(`[ws:error] ${e.message}`);
+};
+
+
 const AbsMousePad = (div) =>
 {
-  let socket         = null;
-  let socketEnabled  = false;
+
   let eventsAttached = false;
   let lastbtn        = 0;
   let lastx          = 0;
@@ -408,14 +443,12 @@ const AbsMousePad = (div) =>
     div.dataset['wheel'] = e.deltaY >= 0 ? Math.min( e.deltaY, 127 ) : Math.max( e.deltaY, -127 );
   };
 
-  const setupSocket = () =>
+  const detachMouseEvents = () =>
   {
-    socket = new WebSocket('ws://'+location.host+'/ws');
-    socket.onmessage = (e) => console.log('Message from server ', e.data);
-    socket.onopen    = (e) => { socket.send('Hello Server!'); socketEnabled = true; };
-    socket.onclose   = (e) => { if (e.wasClean) console.log(`[ws:closed][code=${e.code} reason=${e.reason}]`); else console.log('[ws:died]'); socketEnabled = false; }
-    socket.onerror   = (e) => console.log(`[ws:error] ${e.message}`);
-  };
+    var elClone = div.cloneNode(true);
+    el.parentNode.replaceChild(elClone, el);
+    eventsAttached = false;
+  }
 
   const setupMouseEvents = () =>
   {
@@ -426,6 +459,8 @@ const AbsMousePad = (div) =>
     div.onwheel       = (e) => { setWheel( e ); return MouseReporter(e); }
     div.onclick       = (e) => { if( e.offsetY < 0 ) div.parentElement.style.display = 'none'; return false; }
   };
+
+
 
   if( !eventsAttached ) {
     setupSocket();
@@ -551,6 +586,9 @@ function loadPage(dirpath) {
             });
           } else document.body.innerHTML += "No file list container";
         } else document.body.innerHTML += "JSON PARSING FAILED";
+
+        setupSocket();
+
       };
     };
     xh.open("GET", "/list?dir=" + dir, true);

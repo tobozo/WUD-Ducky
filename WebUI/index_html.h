@@ -153,6 +153,7 @@ const char* index_html = R"indexHTML(
           <div><dt>Flash frequency</dt><dd>{{flashFreq}} MHz</dd></div>
           <div><dt>Flash chip Id</dt><dd>{{getFlashChipMode}}</dd></div>
           <div><dt>Estimated Flash size</dt><dd>{{getFlashChipSize}}</dd></div>
+          <div><dt>PSRAM</dt><dd>{{getPsram}}</dd></div>
           <div><dt>Flash write mode</dt><dd>{{ideMode}}</dd></div>
           <div><dt>📏 Sketch size</dt><dd>{{getSketchSize}}</dd></div>
           <div><dt>#️⃣ Sketch hash</dt><dd>{{getSketchMD5}}</dd></div>
@@ -189,7 +190,7 @@ const char* index_html = R"indexHTML(
               <select id="ducky-locales" onchange="setKbdLocale(this)"><option value="{{KEYBOARD_LOCALE}}" selected></option></select>
             </div>
           </dd></div>
-          <div onclick="AbsMousePad(mouseTab)"><dt>🖱️ Mouse</dt><dd><span class="{{absmouse_begun}}" data-status>◉</span></dd></div>
+          <div onclick="AbsMousePad(mouseTab)"><dt>🖱️ Mouse</dt><dd><span class="{{absmouse_begun}}" data-status>◉</span><span title="start-mousepad">🕹🗔</span></dd></div>
           <div><dt>💾 PenDrive</dt><dd><span class="{{pendrive_begun}}" data-status>◉</span></dd></div>
         </dl>
 

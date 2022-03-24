@@ -497,6 +497,7 @@ void setup()
   WiFi.onEvent(WiFiEventCallback);
   // attach loggers to USB items, messages are deferred for later viewing with ducky "logs" command
   USBPenDriveLogger        = Logger::logsprintf;
+  Logger::wslogemit        = WS::sendWSLogEntry;
 
   WS::WebServerLogger      = Logger::logmsg;     // basic logger
   WS::WebServerLogsPrinter = Logger::printdmesg; // logs history printer
@@ -531,16 +532,23 @@ void setup()
 
 void loop()
 {
-  //if( WUDStatus::webserver_begun ) WS::server.handleClient(); // process webserver commands
-  if( WUDStatus::webserver_begun ) WS::ws.cleanupClients();
+  static unsigned long last = 0;
+  static unsigned long now = millis();
+
+  if( WUDStatus::webserver_begun && now-last > 1000 )
+  {
+    WS::ws.cleanupClients();
+    last = now;
+  }
+
   if( WUDStatus::ota_enabled ) ArduinoOTA.handle();
 
   if( WUDStatus::usbserial_begun && USBSerial.available() )     // process serial commands
   {
     String line = "";
     while( USBSerial.available() && line.length()<MAX_SERIAL_INPUT ) line += (char)USBSerial.read();
-    line.trim();
-    int repeats = duckparser::getRepeats();
+    line.trim(); // this may be counterproductive, some parser logic blocks require a trailing CR/LF
+    int repeats = duckparser::getRepeats(); // TODO: implement repeat "LAST" command, not "NEXT"
     do {
       duckparser::parse( line );
     } while( --repeats > 0 );

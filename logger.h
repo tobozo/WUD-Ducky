@@ -6,10 +6,13 @@
 namespace Logger
 {
   std::vector<String> dmesg; // ring buffer
-  int max_log_len = 4096; // max bytes in ring buffer
+  int max_log_len = 1024; // max bytes in ring buffer
   int log_len = 0; // bytes in ring buffer
 
   typedef void(*logprintercb)( String msg );
+
+  logprintercb wslogemit = nullptr; // web service logs sender
+
   bool enabled = true;
 
 
@@ -29,10 +32,10 @@ namespace Logger
     clear();
   }
 
-  // log to ring buffer
-  void push( String msg )
+  // log to ring buffer / WS
+  void push( String &msg )
   {
-    if( !enabled ) return;
+    if( wslogemit ) wslogemit( msg );
     size_t msg_len = msg.length() + 1;
     if( msg_len > max_log_len ) return;
     while( msg_len + log_len > max_log_len && dmesg.size() > 0 ) {
@@ -77,12 +80,12 @@ namespace Logger
   }
 
   // dump logs using callback
-  void printdmesg( logprintercb logprint, bool clear_after=false )
+  void printdmesg( logprintercb logprint_cb, bool clear_after=false )
   {
     if( !enabled ) return;
     if( dmesg.size() > 0 ) {
       for( int i=0; i<dmesg.size(); i++ ) {
-        logprint( dmesg[i] );
+        logprint_cb( dmesg[i] );
       }
       if( clear_after ) clear();
     }

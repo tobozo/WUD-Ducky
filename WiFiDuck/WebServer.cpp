@@ -109,28 +109,29 @@ namespace WS
             AbsMouse.sendReport( *report );
           }
         } else {
-          Logger::logsprintf("ws[%s][%u] mouse invalid msg len: %d (expecting multiple of %d)", server->url(), client->id(), len, elemSize );
-        }
-        /*
-        if(info->opcode == WS_TEXT){
-          for(size_t i=0; i < info->len; i++) {
-            msg += (char) data[i];
+          // not a mouse message
+          if(info->opcode == WS_TEXT){
+            for(size_t i=0; i < info->len; i++) {
+              msg += (char) data[i];
+            }
+          } else {
+            char buff[3];
+            for(size_t i=0; i < info->len; i++) {
+              sprintf(buff, "%02x ", (uint8_t) data[i]);
+              msg += buff ;
+            }
           }
-        } else {
-          char buff[3];
-          for(size_t i=0; i < info->len; i++) {
-            sprintf(buff, "%02x ", (uint8_t) data[i]);
-            msg += buff ;
-          }
+
+          Logger::logsprintf("%s",msg.c_str());
+
+          if(info->opcode == WS_TEXT)
+            client->text("I got your text message");
+          else
+            client->binary("I got your binary message");
+
+          // Logger::logsprintf("ws[%s][%u] mouse invalid msg len: %d (expecting multiple of %d)", server->url(), client->id(), len, elemSize );
         }
 
-        Logger::logsprintf("%s",msg.c_str());
-
-        if(info->opcode == WS_TEXT)
-          client->text("I got your text message");
-        else
-          client->binary("I got your binary message");
-        */
       } else {
         //message is comprised of multiple frames or the frame is split into multiple packets
         if(info->index == 0){
@@ -390,6 +391,11 @@ namespace WS
   }
 
 
+  void sendWSLogEntry( String logEntry )
+  {
+    ws.textAll( logEntry );
+  }
+
 
 
 
@@ -427,6 +433,7 @@ namespace WS
     events.onConnect([](AsyncEventSourceClient *client){
       client->send("hello!",NULL,millis(),1000);
     });
+
     server.addHandler(&events);
 
     server.onNotFound([](AsyncWebServerRequest *request) {

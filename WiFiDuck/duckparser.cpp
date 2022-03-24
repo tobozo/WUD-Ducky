@@ -335,6 +335,7 @@ namespace duckcommands
   // SpaceHuhn's legacy WiFiDuck named keys
   duckCommand KeyCommands[] =
   {
+    // named keys
     {"ENTER",       [](){ keyboard::pressKey(KEY_ENTER); } },
     {"MENU",        [](){ keyboard::pressKey(KEY_PROPS); } },
     {"APP",         [](){ keyboard::pressKey(KEY_PROPS); } },
@@ -370,16 +371,36 @@ namespace duckcommands
     {"F12",         [](){ keyboard::pressKey(KEY_F_12); } },
     {"SPACE",       [](){ keyboard::pressKey(KEY_SPACE); } },
     {"PAUSE",       [](){ keyboard::pressKey(KEY_PAUSE); } },
+    {"BREAK",       [](){ keyboard::pressKey(KEY_PAUSE); } },
     {"CAPSLOCK",    [](){ keyboard::pressKey(KEY_CAPSLOCK); } },
     {"NUMLOCK",     [](){ keyboard::pressKey(KEY_NUMLOCK); } },
     {"PRINTSCREEN", [](){ keyboard::pressKey(KEY_SYSRQ); } },
     {"SCROLLLOCK",  [](){ keyboard::pressKey(KEY_SCROLLLOCK); } },
+
+    // numpad keys
+    {"NUM_0",       [](){ keyboard::pressKey(KEY_KP0);        } },
+    {"NUM_1",       [](){ keyboard::pressKey(KEY_KP1);        } },
+    {"NUM_2",       [](){ keyboard::pressKey(KEY_KP2);        } },
+    {"NUM_3",       [](){ keyboard::pressKey(KEY_KP3);        } },
+    {"NUM_4",       [](){ keyboard::pressKey(KEY_KP4);        } },
+    {"NUM_5",       [](){ keyboard::pressKey(KEY_KP5);        } },
+    {"NUM_6",       [](){ keyboard::pressKey(KEY_KP6);        } },
+    {"NUM_7",       [](){ keyboard::pressKey(KEY_KP7);        } },
+    {"NUM_8",       [](){ keyboard::pressKey(KEY_KP8);        } },
+    {"NUM_9",       [](){ keyboard::pressKey(KEY_KP9);        } },
+    {"NUM_ASTERIX", [](){ keyboard::pressKey(KEY_KPASTERISK); } },
+    {"NUM_ENTER",   [](){ keyboard::pressKey(KEY_KPENTER);    } },
+    {"NUM_MINUS",   [](){ keyboard::pressKey(KEY_KPMINUS);    } },
+    {"NUM_DOT",     [](){ keyboard::pressKey(KEY_KPDOT);      } },
+    {"NUM_PLUS",    [](){ keyboard::pressKey(KEY_KPPLUS);     } },
+
     // modifiers
     {"CTRL",        [](){ keyboard::pressKey(KEY_MOD_LCTRL); } },
     {"CONTROL",     [](){ keyboard::pressKey(KEY_MOD_LCTRL); } },
     {"SHIFT",       [](){ keyboard::pressKey(KEY_MOD_LSHIFT); } },
     {"ALT",         [](){ keyboard::pressKey(KEY_MOD_LALT); } },
     {"WINDOWS",     [](){ keyboard::pressKey(KEY_MOD_LMETA); } },
+    {"GUI",         [](){ keyboard::pressKey(KEY_MOD_LMETA); } },
   };
 
 };
@@ -465,6 +486,7 @@ namespace duckparser
       } else { // Otherwise go through words and look for keys to press
         wordnode = wordlist->first;
         while (wordnode) {
+          //
           press(wordnode->str, wordnode->len);
           wordnode = wordnode->next;
         }

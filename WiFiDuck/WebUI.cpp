@@ -145,6 +145,7 @@ namespace WebUI
     String FreeHeap        = Logger::formatBytes( ESP.getFreeHeap() );
     String MinFreeHeap     = Logger::formatBytes( ESP.getMinFreeHeap() );
     String MaxAllocHeap    = Logger::formatBytes( ESP.getMaxAllocHeap() );
+    String Psram           = psramInit() ? Logger::formatBytes( ESP.getFreeHeap() ) : "No Psram";
     String ProductId       = "0x" + String( USB.PID(), HEX );
     String VendorId        = "0x" + String( USB.VID(), HEX );
     String MacAddr         = WiFi.macAddress();
@@ -183,6 +184,7 @@ namespace WebUI
       { "getFreeHeap"        , FreeHeap.c_str()        },
       { "getMinFreeHeap"     , MinFreeHeap.c_str()     },
       { "getMaxAllocHeap"    , MaxAllocHeap.c_str()    },
+      { "getPsram"           , Psram.c_str()           },
       { "USB_VID"            , ProductId.c_str()       },
       { "USB_PID"            , VendorId.c_str()        },
       { "USB_MANUFACTURER"   , manufacturerName        },

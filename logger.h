@@ -60,7 +60,7 @@ namespace Logger
     uint32_t h = now/(60000*60);
     uint32_t S  = s%60;
     uint32_t M  = m%60;
-    uint32_t H  = h%60;
+    uint32_t H  = h%24;
     uint32_t SS = now%1000;
     sprintf(strftime_buf, "%02d:%02d:%02d.%03d", H, M, S, SS );
     msg = "[@" + String( strftime_buf) + "] " + msg;

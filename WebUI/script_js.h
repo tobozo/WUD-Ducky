@@ -456,10 +456,12 @@ const AbsMousePad = (div) =>
     div.onmouseup     = (e) => { setBtn( 0x00 ); return MouseReporter(e);  }
     div.onmousedown   = (e) => { switch (e.button) { case 0:setBtn(0x01);break; case 1:setBtn(0x04);break; case 2:setBtn(0x02);break; } return MouseReporter(e); }
     div.onmousemove   = (e) => { setXY( e.offsetX, e.offsetY ); return MouseReporter(e); }
-    div.ontouchmove   = (e) => { setXY( e.offsetX, e.offsetY ); return MouseReporter(e); } // mobile support ?
     div.onwheel       = (e) => { setWheel( e ); return MouseReporter(e); }
 
-
+    div.ontouchmove   = (e) => { setXY( e.changedTouches[0].offsetX, e.changedTouches[0].offsetY ); return MouseReporter(e); } // mobile support ?
+   // div.ontouchstart  = (e) => { setXY( e.offsetX, e.offsetY ); return MouseReporter(e); } // mobile support ?
+   //div.ontouchend    = (e) => { setXY( e.offsetX, e.offsetY ); return MouseReporter(e); } // mobile support ?
+   //e.changedTouches[0]
 
 
     div.onclick       = (e) => { if( e.offsetY < 0 ) div.parentElement.style.display = 'none'; return false; }

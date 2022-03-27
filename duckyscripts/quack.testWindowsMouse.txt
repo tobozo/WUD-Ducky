@@ -1,0 +1,43 @@
+DEFAULTDELAY 200
+DELAY 1000
+REM Start blinking the LED
+LED 0 0 255
+
+REM open paint
+GUI r
+STRING mspaint
+ENTER
+DELAY 1000
+
+REM Maximize window (GUI+UP)
+keycode 0x00 0xe3 0x52
+DELAY 500
+
+REM open image properties
+ALT f
+DELAY 200
+e
+DELAY 200
+
+REM enter new image width/height
+STRING 1920
+TAB
+STRING 1080
+TAB
+TAB
+ENTER
+DELAY 500
+
+REM Setup display zone for the mouse
+SetDisplay 1920 1080
+REM test mouse drawing
+DrawSpaceInvaders
+
+REM close paint
+DELAY 5000
+ALT F4
+RIGHT
+ENTER
+
+REM Stop blinking the LED
+LED OFF

@@ -72,6 +72,24 @@ The payload syntax is heavily inspired by [whid-injector](https://github.com/whi
  - Comes with many bugs but also with an easter egg
 
 
+# Platform requirements:
+
+ - Arduino IDE or CLI
+ - ESP32 package 2.0.2
+
+
+# Library dependencies
+
+ - https://github.com/bblanchon/ArduinoJson
+ - https://github.com/me-no-dev/AsyncTCP
+ - https://github.com/me-no-dev/ESPAsyncWebServer
+
+# Library Patching
+
+ - ESP32 package 2.0.x up to 2.0.2 have [issues with SD](https://github.com/espressif/arduino-esp32/pull/6162).
+   Overwriting your existing SD library with the one from the [master branch](https://github.com/espressif/arduino-esp32/tree/master/libraries/SD) will fix it.
+
+
 # Debugging:
 
 With the lastest changed, `USB CDC On Boot` should be **disabled** as it glitches the USB device detection with Windows.
@@ -154,14 +172,10 @@ See the [wiki page](https://wiki.aprbrother.com/en/wud.html) for more info.
 
 ## Credits:
 
- - @chegewara for helping me starting with this project and maintaining the awesome ESPTinyUSB library.
- - @SpaceHuhn for letting my copy parts of the WiFiDuck parser.
- - @whid-injector for providing inspiration.
- - @bblanchon for his awesome ArduinoJson library.
- - https://github.com/spacehuhn/wifi_ducky
- - https://github.com/chegewara/EspTinyUSB
- - https://github.com/whid-injector/WHID
- - https://github.com/bblanchon/ArduinoJson
- - https://github.com/me-no-dev/ESPAsyncWebServer
+ - [@chegewara](https://github.com/chegewara) for helping me starting with this project and maintaining the awesome [ESPTinyUSB](https://github.com/chegewara/EspTinyUSB) library.
+ - [@SpaceHuhn](https://github.com/spacehuhn) for letting my copy parts of the [WiFiDuck parser](https://github.com/spacehuhn/wifi_ducky).
+ - [@whid-injector](https://github.com/whid-injector) for providing inspiration with [WHID](https://github.com/whid-injector/WHID).
+ - [@bblanchon](https://github.com/bblanchon) for his awesome [ArduinoJson](https://github.com/bblanchon/ArduinoJson) library.
+ - [@me-no-dev](https://github.com/me-no-dev) for maintaining the excellent [ESPAsyncWebServer](https://github.com/me-no-dev/ESPAsyncWebServer) and [AsyncTCP](https://github.com/me-no-dev/AsyncTCP) libraries
 
 

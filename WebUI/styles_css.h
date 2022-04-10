@@ -499,9 +499,15 @@ body.disclaimer { padding: 1rem }
   box-sizing: border-box;
 }
 
-#mouse-tab { background: white; width: 100%; height: 100%; position: relative; }
+#mouse-tab { background: white; width: 100%; height: 100%; position: relative; /*touch-action: none;*/ }
 #mouse-tab::before { position: absolute; top: -1.5em; left: 0; content: "Mouse: " attr(data-btn) ", x:" attr(data-x) ", y:" attr(data-y); }
 #mouse-tab::after { right: 0; top: -1.5em; content: "X"; position: absolute; background: white; color: red; width: 2em; text-align: center; border-radius: .2em .2em 0 0; height: 1.5em; line-height: 1.5em; }
+
+/* smartphones, touchscreens */
+@media (hover: none) and (pointer: coarse) {
+  #mouse-tab::before { position: absolute; top: -1.5em; left: 0; content: "Touch: " attr(data-btn) ", x:" attr(data-x) ", y:" attr(data-y); /*touch-action: pan-x, pan-y;*/ }
+}
+
 
 )StylesCSS";
 

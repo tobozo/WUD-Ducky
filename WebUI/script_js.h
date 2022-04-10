@@ -394,10 +394,33 @@ const setupSocket = () =>
 };
 
 
+/*
+let eventMap = {};
+
+(function(){
+  const eventReplacement = {
+    "mousedown": ["touchstart mousedown", "mousedown"],
+    "mouseup":   ["touchend mouseup",     "mouseup"],
+    "click":     ["touchstart click",     "click"],
+    "mousemove": ["touchmove mousemove",  "mousemove"]
+  };
+
+  for (i in eventReplacement) {
+    if (typeof window["on" + eventReplacement[i][0]] == "object") {
+      eventMap[i] = eventReplacement[i][0];
+    }  else {
+      eventMap[i] = eventReplacement[i][1];
+    };
+  };
+})();
+*/
+
+
 const AbsMousePad = (div) =>
 {
 
-  let eventsAttached = false;
+  let eventsAttached   = false;
+  let gesturesDisabled = false;
   let lastbtn        = 0;
   let lastx          = 0;
   let lasty          = 0;
@@ -445,25 +468,90 @@ const AbsMousePad = (div) =>
 
   const detachMouseEvents = () =>
   {
-    var elClone = div.cloneNode(true);
+    let elClone = div.cloneNode(true);
     el.parentNode.replaceChild(elClone, el);
     eventsAttached = false;
   }
 
+
+
+  const disableGestures = ( div ) =>
+  {
+    if( gesturesDisabled ) return;
+    // Prevent scrolling when touching the div
+    document.body.addEventListener("touchstart", (e) => {
+      if (e.target == div) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, false);
+    document.body.addEventListener("touchend", (e) => {
+      if (e.target == div) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, false);
+    document.body.addEventListener("touchmove", (e) => {
+      if (e.target == div) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, false);
+
+    gesturesDisabled = true;
+  };
+
+
+  const setupTouchEvents = () =>
+  {
+    disableGestures( div );
+    // Set up touch events for mobile, etc
+    div.addEventListener("touchstart", (e) => {
+      let mousePos = getTouchPos(div, e);
+      let touch = e.touches[0];
+      let mouseEvent = new MouseEvent("mousedown", {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        offsetX: touch.offsetX,
+        offsetY: touch.offsetY,
+      });
+      div.dispatchEvent(mouseEvent);
+    }, false);
+    div.addEventListener("touchend", (e) => {
+      let mouseEvent = new MouseEvent("mouseup", {});
+      div.dispatchEvent(mouseEvent);
+    }, false);
+    div.addEventListener("touchmove", (e) => {
+      let touch = e.touches[0];
+      let mouseEvent = new MouseEvent("mousemove", {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        offsetX: touch.offsetX,
+        offsetY: touch.offsetY,
+      });
+      div.dispatchEvent(mouseEvent);
+    }, false);
+
+    // Get the position of a touch relative to the div
+    function getTouchPos(elem, touchEvent) {
+      let rect = elem.getBoundingClientRect();
+      return {
+        x: touchEvent.touches[0].clientX - rect.left,
+        y: touchEvent.touches[0].clientY - rect.top
+      };
+    }
+  }
+
+
+
+
   const setupMouseEvents = () =>
   {
+    div.onmouseup     = (e) => { setBtn( 0x00 ); return MouseReporter(e);  };
+    div.onmousedown   = (e) => { switch (e.button) { case 0:setBtn(0x01);break; case 1:setBtn(0x04);break; case 2:setBtn(0x02);break; } return MouseReporter(e); };
+    div.onmousemove   = (e) => { setXY( e.offsetX, e.offsetY ); return MouseReporter(e); };
     div.oncontextmenu = (e) => { return false; }
-    div.onmouseup     = (e) => { setBtn( 0x00 ); return MouseReporter(e);  }
-    div.onmousedown   = (e) => { switch (e.button) { case 0:setBtn(0x01);break; case 1:setBtn(0x04);break; case 2:setBtn(0x02);break; } return MouseReporter(e); }
-    div.onmousemove   = (e) => { setXY( e.offsetX, e.offsetY ); return MouseReporter(e); }
     div.onwheel       = (e) => { setWheel( e ); return MouseReporter(e); }
-
-    div.ontouchmove   = (e) => { setXY( e.changedTouches[0].offsetX, e.changedTouches[0].offsetY ); return MouseReporter(e); } // mobile support ?
-   // div.ontouchstart  = (e) => { setXY( e.offsetX, e.offsetY ); return MouseReporter(e); } // mobile support ?
-   //div.ontouchend    = (e) => { setXY( e.offsetX, e.offsetY ); return MouseReporter(e); } // mobile support ?
-   //e.changedTouches[0]
-
-
     div.onclick       = (e) => { if( e.offsetY < 0 ) div.parentElement.style.display = 'none'; return false; }
   };
 
@@ -472,6 +560,7 @@ const AbsMousePad = (div) =>
   if( !eventsAttached ) {
     setupSocket();
     setupMouseEvents();
+    setupTouchEvents();
     eventsAttached = true;
   }
 

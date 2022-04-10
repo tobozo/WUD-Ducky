@@ -75,7 +75,7 @@ The payload syntax is heavily inspired by [whid-injector](https://github.com/whi
 # Platform requirements:
 
  - Arduino IDE or CLI
- - ESP32 package 2.0.2
+ - ESP32 package 2.0.3-RC1
 
 
 # Library dependencies

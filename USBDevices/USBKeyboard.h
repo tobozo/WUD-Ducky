@@ -35,7 +35,7 @@
 
 #if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(2, 0, 3)
   // 'Keyboard.sendReport' is public in this version
-  #define DuckyKeyboard USBHIDDevice
+  #define DuckyKeyboard USBHIDKeyboard
 
 #else
 

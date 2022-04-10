@@ -104,7 +104,7 @@ const char* credits_html  = R"CreditsHTML(
     </div>
   </div>
   <footer>
-    <span id="version">Version 0.0.1</span>
+    <span id="version">Version 0.0.2</span>
     <br>
     <br>
     <a href="https://github.com/tobozo/WUD-Ducky" target="_blank">Repository</a> | <a href="/about.html">Credits</a>
